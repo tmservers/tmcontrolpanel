@@ -19,9 +19,11 @@ export const routes = {
     apiKeys: "/server/:id/api-keys",
   },
   tournaments: {
-    tournament: "/tournaments/:id",
+    competition: "/competitions/:id",
+    match: "/match/:id",
     stage: "/tournaments/:id/stages/:stageId",
     registrations: "/tournaments/:id/stages/:stageId/registrations",
+    myServers: "/my-servers",
   },
   admin: {
     users: "/admin/users",
@@ -355,13 +357,24 @@ export const breadCrumbs: {
     ],
   },
   {
-    path: routes.tournaments.tournament,
+    path: routes.tournaments.competition,
     breadCrumbs: [
       {
         label: "Tournaments",
       },
       {
         label: "Tournament Info",
+      },
+    ],
+  },
+  {
+    path: routes.tournaments.match,
+    breadCrumbs: [
+      {
+        label: "Tournaments",
+      },
+      {
+        label: "Match",
       },
     ],
   },

@@ -15,8 +15,15 @@ import {
 } from "@/components/ui/sidebar";
 import { generatePath, getCurrentId } from "@/lib/utils";
 import { routes } from "@/routes";
-import { IconLogin, IconPlus, IconTrophy } from "@tabler/icons-react";
+import {
+  IconLogin,
+  IconPlus,
+  IconServer,
+  IconTrophy,
+} from "@tabler/icons-react";
 import Link from "next/link";
+
+import { signInToTmservers } from "@/lib/spacetimedb/session";
 
 import Modal from "@/components/modals/modal";
 import CreateTournamentModal from "@/components/modals/tournaments/tournament/create-tournament";
@@ -27,23 +34,7 @@ import { useAuth } from "react-oidc-context";
 import { useSpacetimeDB } from "spacetimedb/react";
 
 export default function NavTournaments() {
-  const pathname = usePathname();
-  const activeId = getCurrentId(pathname);
-
-  const spacetime = useSpacetimeDB();
   const auth = useAuth();
-  const { tournaments, isReady } = useMyProjects();
-
-  const upcomingTournaments = tournaments
-    .filter((t) => t.endingAt.toDate() >= new Date())
-    // Sort by starting date ascending, closest first
-    .sort(
-      (a, b) =>
-        a.startingAt.toDate().getTime() - b.startingAt.toDate().getTime(),
-    );
-  const passedTournaments = tournaments.filter(
-    (t) => t.endingAt.toDate() < new Date(),
-  );
 
   if (auth.isLoading) {
     return (
@@ -59,14 +50,14 @@ export default function NavTournaments() {
     );
   }
 
-  if (!auth.isAuthenticated) {
+  if (!auth.isAuthenticated || !auth.user?.id_token) {
     return (
       <SidebarGroup className="group-data-[collapsible=icon]:hidden select-none">
         <SidebarGroupLabel>Tournaments</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton onClick={() => auth.signinRedirect()}>
+              <SidebarMenuButton onClick={() => signInToTmservers(auth)}>
                 <IconLogin />
                 Log in to view tournaments
               </SidebarMenuButton>
@@ -76,6 +67,28 @@ export default function NavTournaments() {
       </SidebarGroup>
     );
   }
+
+  // SpacetimeDB hooks need the provider, which only mounts once a token exists
+  return <TournamentList />;
+}
+
+function TournamentList() {
+  const pathname = usePathname();
+  const activeId = getCurrentId(pathname);
+
+  const spacetime = useSpacetimeDB();
+  const { tournaments, isReady } = useMyProjects();
+
+  const upcomingTournaments = tournaments
+    .filter((t) => t.endingAt.toDate() >= new Date())
+    // Sort by starting date ascending, closest first
+    .sort(
+      (a, b) =>
+        a.startingAt.toDate().getTime() - b.startingAt.toDate().getTime(),
+    );
+  const passedTournaments = tournaments.filter(
+    (t) => t.endingAt.toDate() < new Date(),
+  );
 
   if (!spacetime.isActive || !isReady) {
     return (
@@ -88,7 +101,7 @@ export default function NavTournaments() {
                   <span>
                     {spacetime.isActive
                       ? "Loading tournaments..."
-                      : "Not connected to SpacetimeDB"}
+                      : "Not connected to tmservers.live"}
                   </span>
                 </div>
               </SidebarMenuButton>
@@ -114,8 +127,8 @@ export default function NavTournaments() {
             <SidebarMenuItem key={tournament.id}>
               <SidebarMenuButton tooltip={tournament.name} asChild>
                 <Link
-                  href={generatePath(routes.tournaments.tournament, {
-                    id: tournament.id.toString(),
+                  href={generatePath(routes.tournaments.competition, {
+                    id: tournament.rootCompetition.toString(),
                   })}
                   className="select-none cursor-pointer"
                 >
@@ -153,8 +166,8 @@ export default function NavTournaments() {
                       <SidebarMenuItem key={tournament.id}>
                         <SidebarMenuButton tooltip={tournament.name} asChild>
                           <Link
-                            href={generatePath(routes.tournaments.tournament, {
-                              id: tournament.id.toString(),
+                            href={generatePath(routes.tournaments.competition, {
+                              id: tournament.rootCompetition.toString(),
                             })}
                             className="select-none cursor-pointer"
                           >
@@ -171,6 +184,22 @@ export default function NavTournaments() {
               </SidebarMenuItem>
             </Collapsible>
           )}
+
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              tooltip="My Servers"
+              isActive={pathname === routes.tournaments.myServers}
+              asChild
+            >
+              <Link
+                href={routes.tournaments.myServers}
+                className="select-none cursor-pointer"
+              >
+                <IconServer />
+                <span>My Servers</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>

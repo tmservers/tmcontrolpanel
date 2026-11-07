@@ -13,9 +13,11 @@ const config: Config = {
   ECM: {
     URL: "https://us-central1-fantasy-trackmania.cloudfunctions.net",
   },
-  SPACETIME: {
-    URI: process.env.NEXT_PUBLIC_SPACETIME_URI || "",
-    MODULE: process.env.NEXT_PUBLIC_SPACETIME_MODULE || "",
+  TMSERVERS: {
+    URI: process.env.NEXT_PUBLIC_TMSERVERS_URI || "https://maincloud.spacetimedb.com",
+    MODULE: process.env.NEXT_PUBLIC_TMSERVERS_MODULE || "tmservers",
+    DISABLED: process.env.NEXT_PUBLIC_TMSERVERS_DISABLED === "true",
+    CLIENT_ID: process.env.NEXT_PUBLIC_TMSERVERS_CLIENT_ID || "client_032iz9ltL5ppeGSKpDd4eH",
   },
   DEFAULT_ADMINS: process.env.DEFAULT_ADMINS
     ? process.env.DEFAULT_ADMINS.split(",")

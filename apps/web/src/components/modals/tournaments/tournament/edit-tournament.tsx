@@ -1,35 +1,24 @@
 "use client";
-import { Card } from "@/components/ui/card";
+import { ModalContent } from "@/components/modals/modal";
+import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import EditTournamentForm from "@/forms/tournaments/tournament/edit-tournament-form";
-import { TournamentV1 } from "@/lib/server-manager";
-import { IconX } from "@tabler/icons-react";
+import { ProjectV1 } from "@/lib/server-manager/types";
 import { Infer } from "spacetimedb";
 import { DefaultModalProps } from "../../default-props";
 
 export default function EditTournamentModal({
   data,
   closeModal,
-}: DefaultModalProps<Infer<typeof TournamentV1>>) {
+}: DefaultModalProps<Infer<typeof ProjectV1>>) {
   if (!data) return null;
 
-  const stopPropagation = (e: React.MouseEvent) => {
-    e.stopPropagation();
-  };
-
   return (
-    <Card
-      onClick={stopPropagation}
-      className="p-6 gap-6 sm:min-w-[400px] max-sm:w-full max-h-[90vh] overflow-y-auto"
-    >
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Edit Tournament</h1>
-        <IconX
-          className="h-6 w-6 cursor-pointer text-muted-foreground"
-          onClick={closeModal}
-        />
-      </div>
+    <ModalContent className="gap-6 sm:min-w-[400px]">
+      <DialogHeader className="pr-6">
+        <DialogTitle>Edit Tournament</DialogTitle>
+      </DialogHeader>
 
       <EditTournamentForm tournament={data} callback={closeModal} />
-    </Card>
+    </ModalContent>
   );
 }

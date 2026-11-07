@@ -18,10 +18,13 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import config from "@/lib/config";
+import { signOutOfTmservers } from "@/lib/spacetimedb/session";
 import { useNotifications } from "@/providers/notification-provider";
 import { routes } from "@/routes";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "react-oidc-context";
 import { ThemeToggle } from "../theme-toggle";
 import { NotificationsList } from "./notifications-list";
 
@@ -105,6 +108,7 @@ export function SiteUser() {
               <ThemeToggle />
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
+            {!config.TMSERVERS.DISABLED && <TmserversLogoutItem />}
             <DropdownMenuItem onClick={signOutHandler}>
               <IconLogout />
               Log out
@@ -113,5 +117,19 @@ export function SiteUser() {
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
+  );
+}
+
+// Only mounted when tmservers is enabled, since the OIDC provider is absent otherwise
+function TmserversLogoutItem() {
+  const auth = useAuth();
+
+  if (!auth.isAuthenticated) return null;
+
+  return (
+    <DropdownMenuItem onClick={() => signOutOfTmservers(auth)}>
+      <IconLogout />
+      Log out of tmservers.live
+    </DropdownMenuItem>
   );
 }

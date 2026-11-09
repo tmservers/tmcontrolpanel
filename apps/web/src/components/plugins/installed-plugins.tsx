@@ -3,6 +3,7 @@
 import { reloadServerPlugins } from "@/actions/database/server-plugins";
 import {
   changeServerPluginVersion,
+  checkForPluginUpdates,
   installMarketplacePlugin,
   installUploadedPlugin,
   saveServerPluginConfig,
@@ -41,6 +42,7 @@ import {
   IconBuildingStore,
   IconDownload,
   IconHistory,
+  IconRefresh,
   IconReload,
   IconSettings,
   IconTrash,
@@ -412,6 +414,44 @@ function ReloadButton({ serverId }: { serverId: string }) {
   );
 }
 
+function CheckUpdatesButton({ serverId }: { serverId: string }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+
+  async function check() {
+    setBusy(true);
+    try {
+      const { data, error } = await checkForPluginUpdates(serverId);
+      if (error || !data) {
+        throw new ServerError(error ?? "No result", "CheckPluginUpdatesError");
+      }
+      if (data.updates > 0) {
+        toast.success(
+          data.updates === 1
+            ? "1 update available"
+            : `${data.updates} updates available`,
+        );
+      } else {
+        toast.success("All plugins are up to date");
+      }
+      router.refresh();
+    } catch (error) {
+      toast.error("Failed to check for updates", {
+        description: getErrorMessage(error),
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Button variant="outline" onClick={check} disabled={busy}>
+      <IconRefresh className={busy ? "animate-spin" : undefined} />
+      Check for updates
+    </Button>
+  );
+}
+
 function UpdateAllButton({
   serverId,
   count,
@@ -495,6 +535,7 @@ export default function InstalledPlugins({
           {updatable > 0 && (
             <UpdateAllButton serverId={serverId} count={updatable} />
           )}
+          {marketplaceEnabled && <CheckUpdatesButton serverId={serverId} />}
           <ReloadButton serverId={serverId} />
           {marketplaceEnabled && (
             <Link

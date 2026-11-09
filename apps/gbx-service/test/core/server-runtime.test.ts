@@ -379,7 +379,7 @@ describe("ServerRuntime updates", () => {
 });
 
 describe("ServerRuntime notices", () => {
-  const prefix = "$<$0cfTMControlPanel$>: ";
+  const prefix = "$<$0c6TMControlPanel$>: ";
   it("names the controller version when connecting", async () => {
     const h = await createHarness({
       connect: false,

@@ -5,6 +5,7 @@ import { logAudit } from "@/actions/database/server-only/audit-logs";
 import { doServerActionWithAuth } from "@/lib/actions";
 import { actorFromSession } from "@/lib/actor";
 import { getClient } from "@/lib/dbclient";
+import { getMarketplaceIndex } from "@/lib/marketplace";
 import { uploadOwnerFilter } from "@/lib/plugin-access";
 import { routePermissions } from "@/routes";
 import { getInstalledPlugins, storedManifest } from "@/services/plugins";
@@ -181,6 +182,21 @@ export interface UpdateAllResult {
   // Need the admin to accept new capabilities, so they are left alone
   needsConsent: string[];
   failed: string[];
+}
+
+// Fetches the marketplace index now instead of waiting for the cache to expire
+export async function checkForPluginUpdates(
+  serverId: string,
+): Promise<ServerResponse<{ updates: number }>> {
+  assertResourceId(serverId);
+  return doServerActionWithAuth(serverAdmin(serverId), async () => {
+    await getMarketplaceIndex(true);
+    const { data: plugins, error } = await getInstalledPlugins(serverId);
+    if (error) throw new ServerError(error, "GetInstalledPluginsError");
+    return {
+      updates: plugins.filter((p) => p.update && !p.update.yanked).length,
+    };
+  });
 }
 
 // Updates every plugin with a newer version that asks for no new capabilities

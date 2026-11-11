@@ -700,6 +700,7 @@ export function PluginConfigForm({
     <form onSubmit={submit} className="flex flex-col gap-4">
       {schema.tmevents && (
         <TmeventsImport
+          serverId={serverId}
           paths={schema.tmevents}
           values={values}
           localMaps={maps}

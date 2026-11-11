@@ -53,3 +53,10 @@ export interface TmeventsEventData {
   sequence: TmeventsStep[];
   presets: TmeventsPreset[];
 }
+
+export interface TmeventsMapsResult {
+  // Event tracks now on the server, with their path in the maps folder
+  added: { uid: string; fileName: string }[];
+  // Names of tracks that could not be downloaded or added
+  failed: string[];
+}

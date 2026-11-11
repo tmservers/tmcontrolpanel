@@ -1,6 +1,6 @@
 "use client";
 
-import { disconnectTmevents } from "@/actions/tmevents";
+import { addTmeventsMaps, disconnectTmevents } from "@/actions/tmevents";
 import { TmText } from "@/components/tm-text";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -41,11 +41,13 @@ const EVENT_SEQUENCE = "event";
 // Lets an admin pick one of their Trackmania Events events and copy parts of it into
 // the settings form. Which parts exist comes from the plugin's manifest.
 export function TmeventsImport({
+  serverId,
   paths,
   values,
   localMaps,
   onImport,
 }: {
+  serverId?: string;
   paths: TmeventsImportPaths;
   values: PluginConfig;
   localMaps: { UId: string; FileName: string }[];
@@ -61,7 +63,9 @@ export function TmeventsImport({
     seeding: true,
     maps: true,
     pickBan: true,
+    downloadMaps: true,
   });
+  const [importing, setImporting] = useState(false);
   const status = useTmeventsStatus();
   const connected = open && status.data?.connected === true;
   const events = useTmeventsEvents(connected);
@@ -113,8 +117,13 @@ export function TmeventsImport({
         localMaps.some((map) => map.UId === track.uid),
       ).length
     : 0;
+  const missing = data
+    ? data.tracks.filter(
+        (track) => !localMaps.some((map) => map.UId === track.uid),
+      )
+    : [];
   const parts: {
-    key: keyof typeof options;
+    key: Exclude<keyof typeof options, "downloadMaps">;
     label: string;
     description: string;
     available: boolean;
@@ -150,13 +159,46 @@ export function TmeventsImport({
     : [];
   const available = parts.filter((part) => part.available);
 
-  function importEvent() {
-    if (!data) return;
+  // Puts missing event tracks on the server and returns the server's map list after it
+  async function downloadMissing(): Promise<typeof localMaps> {
+    if (!serverId || !data) return localMaps;
+    const { data: added, error } = await addTmeventsMaps(
+      serverId,
+      data.event.id,
+      missing.map((track) => track.uid),
+    );
+    if (error) {
+      toast.error("Failed to add the missing tracks", { description: error });
+      return localMaps;
+    }
+    if (added.failed.length)
+      toast.warning(`${added.failed.length} tracks could not be added`, {
+        description: added.failed.join(", "),
+      });
+    const key = queryKeys.localMaps(serverId);
+    await queryClient.invalidateQueries({ queryKey: key });
+    const fresh = queryClient.getQueryData<typeof localMaps>(key);
+    return (
+      fresh ?? [
+        ...localMaps,
+        ...added.added.map((map) => ({ UId: map.uid, FileName: map.fileName })),
+      ]
+    );
+  }
+
+  async function importEvent() {
+    if (!data || importing) return;
     const chosen: TmeventsImportOptions = {
       ...options,
       presetId: presetId === EVENT_SEQUENCE ? undefined : presetId,
     };
-    const result = applyTmeventsImport(values, paths, data, chosen, localMaps);
+    setImporting(true);
+    const serverMaps =
+      options.maps && options.downloadMaps && missing.length && serverId
+        ? await downloadMissing()
+        : localMaps;
+    setImporting(false);
+    const result = applyTmeventsImport(values, paths, data, chosen, serverMaps);
     onImport(result.values);
     if (result.missingMaps.length)
       toast.warning(
@@ -286,21 +328,37 @@ export function TmeventsImport({
                         )}
                       {part.key === "maps" &&
                         options.maps &&
-                        onServer < data.tracks.length && (
+                        missing.length > 0 &&
+                        serverId && (
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              id={`${id}-download`}
+                              checked={options.downloadMaps}
+                              onCheckedChange={(checked) =>
+                                setOptions((current) => ({
+                                  ...current,
+                                  downloadMaps: checked === true,
+                                }))
+                              }
+                            />
+                            <Label
+                              htmlFor={`${id}-download`}
+                              className="text-xs font-normal"
+                            >
+                              Download missing tracks from Nadeo and add them to
+                              the server
+                            </Label>
+                          </div>
+                        )}
+                      {part.key === "maps" &&
+                        options.maps &&
+                        missing.length > 0 && (
                           <ul className="text-xs text-muted-foreground">
-                            {data.tracks
-                              .filter(
-                                (track) =>
-                                  !localMaps.some(
-                                    (map) => map.UId === track.uid,
-                                  ),
-                              )
-                              .map((track) => (
-                                <li key={track.uid}>
-                                  Not on the server:{" "}
-                                  <TmText text={track.name} />
-                                </li>
-                              ))}
+                            {missing.map((track) => (
+                              <li key={track.uid}>
+                                Not on the server: <TmText text={track.name} />
+                              </li>
+                            ))}
                           </ul>
                         )}
                     </div>
@@ -308,11 +366,15 @@ export function TmeventsImport({
                 ))}
               <Button
                 type="button"
-                disabled={!data || !available.some((part) => options[part.key])}
-                onClick={importEvent}
+                disabled={
+                  importing ||
+                  !data ||
+                  !available.some((part) => options[part.key])
+                }
+                onClick={() => void importEvent()}
               >
                 <IconDownload />
-                Import
+                {importing ? "Adding tracks..." : "Import"}
               </Button>
             </div>
           ) : (

@@ -13,6 +13,8 @@ const nextConfig: NextConfig = {
   output: "standalone",
   // Trace from the monorepo root so workspace packages end up in the standalone build
   outputFileTracingRoot: path.join(__dirname, "../../"),
+  // Extra hosts allowed to load dev assets, e.g. a Tailscale name: ALLOWED_DEV_ORIGINS=host.ts.net
+  allowedDevOrigins: process.env.ALLOWED_DEV_ORIGINS?.split(",").filter(Boolean),
   transpilePackages: ["@tmcontrolpanel/db", "@tmcontrolpanel/shared"],
   images: {
     remotePatterns: [

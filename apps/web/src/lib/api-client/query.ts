@@ -47,6 +47,9 @@ export const queryKeys = {
   users: (field: string, ids: string[]) => ["users", field, ...ids] as const,
   hetzner: (projectId: string, what: string) =>
     ["hetzner", projectId, what] as const,
+  tmeventsStatus: () => ["tmevents", "status"] as const,
+  tmeventsEvents: () => ["tmevents", "events"] as const,
+  tmeventsEvent: (eventId: string) => ["tmevents", "events", eventId] as const,
   dashboard: (what: "hetzner" | "activity" | "admin") =>
     ["dashboard", what] as const,
   club: (clubId: number, what: string, ...rest: (string | number)[]) =>

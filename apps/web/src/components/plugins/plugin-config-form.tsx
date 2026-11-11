@@ -41,6 +41,7 @@ import { useSession } from "next-auth/react";
 import Papa from "papaparse";
 import { useId, useRef, useState } from "react";
 import { toast } from "sonner";
+import { TmeventsImport } from "./tmevents-import";
 
 type ObjectField = Extract<ConfigField, { type: "object" }>;
 
@@ -138,7 +139,8 @@ export function PluginConfigForm({
   const mapsQuery = useQuery({
     queryKey: queryKeys.localMaps(serverId ?? ""),
     queryFn: () => unwrap(getLocalMaps(serverId!), "GetLocalMapsError"),
-    enabled: !!serverId && hasWidget(schema, "map"),
+    enabled:
+      !!serverId && (hasWidget(schema, "map") || !!schema.tmevents?.maps),
   });
   const scriptsQuery = useQuery({
     queryKey: queryKeys.scripts(serverId ?? ""),
@@ -214,6 +216,20 @@ export function PluginConfigForm({
         description: getErrorMessage(error),
       });
     }
+  }
+
+  // The import only fills the form; problems show up right away instead of on save
+  function importTmevents(next: PluginConfig) {
+    const check = validatePluginConfig(validationSchema, next);
+    rowIds.current = {};
+    setValues(initialValue(schema, next, session?.user.login) as PluginConfig);
+    setErrors(
+      check.success
+        ? {}
+        : Object.fromEntries(
+            check.issues.map((issue) => [issue.path, issue.message]),
+          ),
+    );
   }
 
   function renderObject(
@@ -682,6 +698,14 @@ export function PluginConfigForm({
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
+      {schema.tmevents && (
+        <TmeventsImport
+          paths={schema.tmevents}
+          values={values}
+          localMaps={maps}
+          onImport={importTmevents}
+        />
+      )}
       {schema.tabs ? (
         <Tabs
           value={activeTab}

@@ -122,6 +122,25 @@ export const configFieldSchema: z.ZodType<ConfigField> = z.lazy(() =>
   ]),
 );
 
+// Where a Trackmania Events import writes: dotted paths to config fields. `maps` is a
+// list of map files, `teams` a list of { name, seed, players }, `players` a list of
+// { login, seed }, `type` receives "team" or "player" and `order` the pick and ban steps.
+const fieldPath = z
+  .string()
+  .max(200)
+  .regex(/^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*){0,4}$/);
+const tmeventsImport = z
+  .object({
+    maps: fieldPath.optional(),
+    type: fieldPath.optional(),
+    teams: fieldPath.optional(),
+    players: fieldPath.optional(),
+    order: fieldPath.optional(),
+  })
+  .strict()
+  .refine((paths) => Object.keys(paths).length > 0, "Map at least one field");
+export type TmeventsImportPaths = z.infer<typeof tmeventsImport>;
+
 // Check depth before recursive parsing so untrusted packages cannot overflow the stack.
 const boundedSchema = z.unknown().superRefine((raw, ctx) => {
   let count = 0;
@@ -156,10 +175,32 @@ export const pluginConfigSchemaSchema = boundedSchema
           .min(1)
           .max(10)
           .optional(),
+        tmevents: tmeventsImport.optional(),
       })
       .strict(),
   )
   .superRefine((schema, ctx) => {
+    for (const [target, path] of Object.entries(schema.tmevents ?? {})) {
+      const field = path
+        .split(".")
+        .reduce<
+          ConfigField | undefined
+        >((parent, key) => (parent?.type === "object" ? parent.properties[key] : undefined), schema);
+      const list =
+        target === "maps" || target === "teams" || target === "players";
+      const fits =
+        field &&
+        (list
+          ? field.type === "array" &&
+            field.items.type === (target === "maps" ? "string" : "object")
+          : field.type === "string");
+      if (!fits)
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["tmevents", target],
+          message: `"${path}" is not a ${list ? "list" : "string"} field that can receive this import`,
+        });
+    }
     if (schema.tabs) {
       const ids = schema.tabs.map((tab) => tab.id);
       const keys = schema.tabs.flatMap((tab) => tab.properties);
@@ -519,6 +560,11 @@ export function mergeSecrets(
       merged[key] = previous[key];
   }
   return merged;
+}
+
+// Panels before SDK 5 refuse the unknown keyword, so the package must target SDK 5.
+export function configSchemaNeedsSdk5(schema: PluginConfigSchema): boolean {
+  return !!schema.tmevents;
 }
 
 // Older panels only understand scalar fields and scalar arrays. Keep richer

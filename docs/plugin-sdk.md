@@ -16,13 +16,13 @@ Upload the zip on **Plugins → Uploaded**, then install it on one of your serve
 
 > **The SDK is not on npm yet.** Until it is, run the CLI from a clone of this repository, for example `bun packages/plugin-sdk/src/cli/main.ts init ~/my-plugin`. The other commands work the same way. For editor types, install it from the clone: `npm install --save-dev ../tmcontrolpanel/packages/plugin-sdk`. The build doesn't need it installed. A plain `npm install` in a generated project fails with a 404, because its `package.json` asks npm for the SDK. The `tmcp-plugin` command that npm links is `packages/plugin-sdk/dist/cli.js`, which is not in Git: run `bun install` and `bun run --filter @tmcontrolpanel/plugin-sdk build` in the clone first, or keep using the `bun packages/plugin-sdk/src/cli/main.ts` form.
 
-| Command | What it does |
-|---|---|
-| `tmcp-plugin init <dir>` | Creates a plugin project. `--slug` and `--name` override the defaults taken from the folder name. |
-| `tmcp-plugin build [dir]` | Bundles `src/index.ts` (or `.js`) into `dist/<entry>`. `--minify` is available, but reviewers prefer readable bundles. |
-| `tmcp-plugin pack [dir]` | Builds, zips and validates the package exactly as a panel will. It prints the sha256 and the registry entry you need to publish. |
-| `tmcp-plugin validate <file.zip>` | Checks an existing package and prints its manifest and capabilities. |
-| `tmcp-plugin registry` | Builds the marketplace site from a registry repository (used by the registry's CI). `--registry <dir>` is the registry (default: the current folder) and `--out <dir>` is where the site goes (default: `site` in the current folder, not in the registry). `--check` validates without writing. See [plugin-marketplace.md](./plugin-marketplace.md#building-the-site-locally). |
+| Command                           | What it does                                                                                                                                                                                                                                                                                                                                                                     |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tmcp-plugin init <dir>`          | Creates a plugin project. `--slug` and `--name` override the defaults taken from the folder name.                                                                                                                                                                                                                                                                                |
+| `tmcp-plugin build [dir]`         | Bundles `src/index.ts` (or `.js`) into `dist/<entry>`. `--minify` is available, but reviewers prefer readable bundles.                                                                                                                                                                                                                                                           |
+| `tmcp-plugin pack [dir]`          | Builds, zips and validates the package exactly as a panel will. It prints the sha256 and the registry entry you need to publish.                                                                                                                                                                                                                                                 |
+| `tmcp-plugin validate <file.zip>` | Checks an existing package and prints its manifest and capabilities.                                                                                                                                                                                                                                                                                                             |
+| `tmcp-plugin registry`            | Builds the marketplace site from a registry repository (used by the registry's CI). `--registry <dir>` is the registry (default: the current folder) and `--out <dir>` is where the site goes (default: `site` in the current folder, not in the registry). `--check` validates without writing. See [plugin-marketplace.md](./plugin-marketplace.md#building-the-site-locally). |
 
 ## Project layout
 
@@ -37,7 +37,7 @@ my-plugin/
 └─ icon.png               optional, at most 256 KB
 ```
 
-A package may be at most 5 MB, unpack to at most 10 MB and hold at most 500 files. The bundle may be 2 MB, each template 256 KB, and docs 200 KB each. The names `manialink`, `widget`, `window` and `scripts/hide` are reserved for the layouts every plugin can extend.
+A package may be at most 5 MB, unpack to at most 10 MB and hold at most 500 files. The bundle may be 2 MB, each template 256 KB, and docs 200 KB each. The names `manialink`, `widget`, `window`, `components/table` and `scripts/hide` are reserved for the layouts every plugin can extend.
 
 ## The manifest
 
@@ -48,7 +48,7 @@ A package may be at most 5 MB, unpack to at most 10 MB and hold at most 500 file
   "slug": "hello",
   "name": "Hello",
   "version": "1.0.0",
-  "sdk": 4,
+  "sdk": 5,
   "description": "Greets players when they join.",
   "author": "Your name",
   "license": "MIT",
@@ -58,26 +58,31 @@ A package may be at most 5 MB, unpack to at most 10 MB and hold at most 500 file
   "configSchema": {
     "type": "object",
     "properties": {
-      "greeting": { "type": "string", "title": "Greeting", "default": "Welcome", "maxLength": 100 }
+      "greeting": {
+        "type": "string",
+        "title": "Greeting",
+        "default": "Welcome",
+        "maxLength": 100
+      }
     }
   },
   "helpText": "/hello - the server says hi"
 }
 ```
 
-| Field | Rules |
-|---|---|
-| `slug` | 3-40 characters: lowercase letters, digits and dashes, starting with a letter and not ending in a dash, with no double dashes. It identifies the plugin and prefixes its widget ids and actions. The names of the [first-party plugins](./first-party-plugins.md) and a few others (`help`, `plugins`, `server`, ...) are reserved. |
-| `name`, `description`, `author` | At most 60, 300 and 100 characters. |
-| `version` | A [semantic version](https://semver.org): `1.2.3`, or `1.2.3-beta.1` for a pre-release. |
-| `sdk` | The plugin SDK version the plugin targets. Currently `4` (SDK 1 to 3 packages remain supported). SDK 3 adds [plugin events](#plugin-events), SDK 4 adds the [theme](#widgets-and-windows) colors. Panels refuse plugins for a newer SDK than they run. |
-| `license`, `repository`, `homepage` | Optional. The links must be `https://`. |
-| `entry` | Path of the bundle inside the package. Default `index.js`. |
-| `gamemodes` | Modes the plugin runs in: `timeattack`, `rounds`, `reversecup`, `cup`, `tmwc`, `tmwt`, `teams`, `knockout`. Leave it out to run in every mode. |
-| `commands` | Chat commands the plugin may register, without the slash. At most 20, each 1-32 lowercase letters, digits, `-` or `_`. `help`, `version`, `uptime`, `status`, `plugins`, `ping`, `sysinfo`, `diagnostics`, `co` and `ai` belong to the panel. |
-| `capabilities` | What the plugin may do. See [Capabilities](#capabilities). |
-| `configSchema` | The plugin's settings form. See [Settings](#settings). |
-| `helpText` | Shown by `/help <slug>`. At most 1000 characters. |
+| Field                               | Rules                                                                                                                                                                                                                                                                                                                               |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `slug`                              | 3-40 characters: lowercase letters, digits and dashes, starting with a letter and not ending in a dash, with no double dashes. It identifies the plugin and prefixes its widget ids and actions. The names of the [first-party plugins](./first-party-plugins.md) and a few others (`help`, `plugins`, `server`, ...) are reserved. |
+| `name`, `description`, `author`     | At most 60, 300 and 100 characters.                                                                                                                                                                                                                                                                                                 |
+| `version`                           | A [semantic version](https://semver.org): `1.2.3`, or `1.2.3-beta.1` for a pre-release.                                                                                                                                                                                                                                             |
+| `sdk`                               | The plugin SDK version the plugin targets. Currently `5` (SDK 1 to 4 packages remain supported). SDK 3 adds [plugin events](#plugin-events), SDK 4 adds the [theme](#widgets-and-windows) colors, SDK 5 adds admin checks, admin-only buttons and the shared table helper. Panels refuse plugins for a newer SDK than they run.     |
+| `license`, `repository`, `homepage` | Optional. The links must be `https://`.                                                                                                                                                                                                                                                                                             |
+| `entry`                             | Path of the bundle inside the package. Default `index.js`.                                                                                                                                                                                                                                                                          |
+| `gamemodes`                         | Modes the plugin runs in: `timeattack`, `rounds`, `reversecup`, `cup`, `tmwc`, `tmwt`, `teams`, `knockout`. Leave it out to run in every mode.                                                                                                                                                                                      |
+| `commands`                          | Chat commands the plugin may register, without the slash. At most 20, each 1-32 lowercase letters, digits, `-` or `_`. `help`, `version`, `uptime`, `status`, `plugins`, `ping`, `sysinfo`, `diagnostics`, `co` and `ai` belong to the panel.                                                                                       |
+| `capabilities`                      | What the plugin may do. See [Capabilities](#capabilities).                                                                                                                                                                                                                                                                          |
+| `configSchema`                      | The plugin's settings form. See [Settings](#settings).                                                                                                                                                                                                                                                                              |
+| `helpText`                          | Shown by `/help <slug>`. At most 1000 characters.                                                                                                                                                                                                                                                                                   |
 
 The manifest is strict: a field that isn't in this table makes the package invalid.
 
@@ -92,8 +97,12 @@ interface Config {
 
 export default definePlugin<Config>({
   create(ctx) {
-    ctx.command("hello", (_args, login) => ctx.chat.sendTo(login, ctx.config().greeting));
-    ctx.on("playerConnect", (player) => ctx.chat.sendTo(player.login, ctx.config().greeting));
+    ctx.command("hello", (_args, login) =>
+      ctx.chat.sendTo(login, ctx.config().greeting),
+    );
+    ctx.on("playerConnect", (player) =>
+      ctx.chat.sendTo(player.login, ctx.config().greeting),
+    );
 
     return {
       start() {
@@ -116,28 +125,29 @@ Callbacks may be `async`. A callback that throws or rejects is logged with the p
 
 ## The context
 
-| Member | Capability | What it does |
-|---|---|---|
-| `pluginId`, `serverId`, `serverName()` | | Identity of the plugin and of the server. |
-| `log.debug/info/warn/error(message, data?)` | | Writes to the GBX service log, tagged with the plugin id. |
-| `config()` / `saveConfig(config)` | | The settings with defaults filled in. `saveConfig` is validated against `configSchema`. |
-| `on(event, handler)` | | Server events and other plugins' events. See [Events](#events). |
-| `emit(name, payload?)` | | An event of your own for other plugins. See [Plugin events](#plugin-events). |
-| `command(name, handler)` | | A chat command from the manifest. The handler gets `(args, login)`. |
-| `action(name, handler)` | | A manialink button. See [Widgets](#widgets-and-windows). |
-| `setTimeout(fn, ms)`, `setInterval(fn, ms)`, `sleep(ms)` | | Timers that are cleared on unload. Both return a cancel function. Intervals run at most every 100 ms. |
-| `live.liveInfo`, `live.activePlayers`, `live.activeMapUid`, `live.roundNumber`, `live.isReverseCup`, `live.findActivePlayer(login)`, `live.reverseCupGetPlayerStatus(login)`, `live.reverseCupGetPointsRepartition(playerCount)` | | Read-only live state of the server. |
-| `players.get(login)` | | A player, from the live state or the server. |
-| `ui.widget(options)`, `ui.window(options)`, `ui.addButton(button)`, `ui.removeButton(name)` | `ui` | Widgets, windows and the shared button bar. |
-| `chat.send(message)`, `chat.sendTo(login, message)` | `chat:send` | Chat messages. |
-| `storage.get/set/delete/keys` | `storage` | JSON values kept per server. |
-| `records.local(mapUid)`, `records.forPlayers(mapUid, logins)` | `records:read` | Records stored by the panel. |
-| `maps.findByUid(uid)`, `maps.findByFileNames(names)` | `maps:read` | Maps stored by the panel. |
-| `nadeo.worldRecord`, `nadeo.personalBests`, `nadeo.accountNames` | `nadeo:read` | Nadeo leaderboards and names, through the panel's Nadeo account. |
-| `notifyAdmins(message, description?)` | `notifications` | A notification for the server's admins in the panel. |
-| `server.setPaused(paused)`, `server.setScriptName(script)` | `mode:control` | Pause the match, change the mode script. |
-| `gbx.call(method, ...params)`, `gbx.callScript(method, ...params)` | per method | Dedicated server calls. See [Server calls](#server-calls). |
-| `http.fetch(url, request?)` | `http:<host>` | HTTPS requests. See [Web requests](#web-requests). |
+| Member                                                                                                                                                                                                                           | Capability      | What it does                                                                                          |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | ----------------------------------------------------------------------------------------------------- |
+| `pluginId`, `serverId`, `serverName()`                                                                                                                                                                                           |                 | Identity of the plugin and of the server.                                                             |
+| `log.debug/info/warn/error(message, data?)`                                                                                                                                                                                      |                 | Writes to the GBX service log, tagged with the plugin id.                                             |
+| `config()` / `saveConfig(config)`                                                                                                                                                                                                |                 | The settings with defaults filled in. `saveConfig` is validated against `configSchema`.               |
+| `on(event, handler)`                                                                                                                                                                                                             |                 | Server events and other plugins' events. See [Events](#events).                                       |
+| `emit(name, payload?)`                                                                                                                                                                                                           |                 | An event of your own for other plugins. See [Plugin events](#plugin-events).                          |
+| `command(name, handler)`                                                                                                                                                                                                         |                 | A chat command from the manifest. The handler gets `(args, login)`.                                   |
+| `action(name, handler)`                                                                                                                                                                                                          |                 | A manialink button. See [Widgets](#widgets-and-windows).                                              |
+| `setTimeout(fn, ms)`, `setInterval(fn, ms)`, `sleep(ms)`                                                                                                                                                                         |                 | Timers that are cleared on unload. Both return a cancel function. Intervals run at most every 100 ms. |
+| `live.liveInfo`, `live.activePlayers`, `live.activeMapUid`, `live.roundNumber`, `live.isReverseCup`, `live.findActivePlayer(login)`, `live.reverseCupGetPlayerStatus(login)`, `live.reverseCupGetPointsRepartition(playerCount)` |                 | Read-only live state of the server.                                                                   |
+| `players.get(login)`                                                                                                                                                                                                             |                 | A player, from the live state or the server.                                                          |
+| `players.isAdmin(login)`                                                                                                                                                                                                         |                 | Whether the login holds a panel admin role on this server (SDK 5).                                    |
+| `ui.widget(options)`, `ui.window(options)`, `ui.addButton(button)`, `ui.removeButton(name)`                                                                                                                                      | `ui`            | Widgets, windows and the shared button bar.                                                           |
+| `chat.send(message)`, `chat.sendTo(login, message)`                                                                                                                                                                              | `chat:send`     | Chat messages.                                                                                        |
+| `storage.get/set/delete/keys`                                                                                                                                                                                                    | `storage`       | JSON values kept per server.                                                                          |
+| `records.local(mapUid)`, `records.forPlayers(mapUid, logins)`                                                                                                                                                                    | `records:read`  | Records stored by the panel.                                                                          |
+| `maps.findByUid(uid)`, `maps.findByFileNames(names)`                                                                                                                                                                             | `maps:read`     | Maps stored by the panel.                                                                             |
+| `nadeo.worldRecord`, `nadeo.personalBests`, `nadeo.accountNames`                                                                                                                                                                 | `nadeo:read`    | Nadeo leaderboards and names, through the panel's Nadeo account.                                      |
+| `notifyAdmins(message, description?)`                                                                                                                                                                                            | `notifications` | A notification for the server's admins in the panel.                                                  |
+| `server.setPaused(paused)`, `server.setScriptName(script)`                                                                                                                                                                       | `mode:control`  | Pause the match, change the mode script.                                                              |
+| `gbx.call(method, ...params)`, `gbx.callScript(method, ...params)`                                                                                                                                                               | per method      | Dedicated server calls. See [Server calls](#server-calls).                                            |
+| `http.fetch(url, request?)`                                                                                                                                                                                                      | `http:<host>`   | HTTPS requests. See [Web requests](#web-requests).                                                    |
 
 Calling something behind a capability the plugin didn't declare, or that the admin didn't grant, throws a `CapabilityError`. Going over a rate limit throws a `RateLimitError`.
 
@@ -145,19 +155,19 @@ Calling something behind a capability the plugin didn't declare, or that the adm
 
 Admins see these when they install the plugin, and an update that adds one needs their consent again.
 
-| Capability | Risk | Unlocks |
-|---|---|---|
-| `ui` | medium | Widgets, windows and buttons. Their ManiaScript runs in the players' game and can open links. |
-| `chat:send` | low | `ctx.chat`. |
-| `storage` | low | `ctx.storage`. |
-| `records:read` | low | `ctx.records`. |
-| `maps:read` | low | `ctx.maps`, and the `GetMapList` and `GetMapInfo` calls. |
-| `maps:write` | medium | Changing the map list and skipping, restarting or jumping to maps. |
-| `players:moderate` | high | Kicking, banning, forcing spectator, and editing the black list, guest list and ignore list. |
-| `mode:control` | high | `ctx.server`, mode script settings, and mode script events that change the match. |
-| `notifications` | low | `ctx.notifyAdmins`. |
-| `nadeo:read` | low | `ctx.nadeo`. |
-| `http:<host>` | medium | HTTPS requests to that host. `http:*.example.com` covers every subdomain. At most 10 hosts; IP addresses are not allowed. |
+| Capability         | Risk   | Unlocks                                                                                                                   |
+| ------------------ | ------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `ui`               | medium | Widgets, windows and buttons. Their ManiaScript runs in the players' game and can open links.                             |
+| `chat:send`        | low    | `ctx.chat`.                                                                                                               |
+| `storage`          | low    | `ctx.storage`.                                                                                                            |
+| `records:read`     | low    | `ctx.records`.                                                                                                            |
+| `maps:read`        | low    | `ctx.maps`, and the `GetMapList` and `GetMapInfo` calls.                                                                  |
+| `maps:write`       | medium | Changing the map list and skipping, restarting or jumping to maps.                                                        |
+| `players:moderate` | high   | Kicking, banning, forcing spectator, and editing the black list, guest list and ignore list.                              |
+| `mode:control`     | high   | `ctx.server`, mode script settings, and mode script events that change the match.                                         |
+| `notifications`    | low    | `ctx.notifyAdmins`.                                                                                                       |
+| `nadeo:read`       | low    | `ctx.nadeo`.                                                                                                              |
+| `http:<host>`      | medium | HTTPS requests to that host. `http:*.example.com` covers every subdomain. At most 10 hosts; IP addresses are not allowed. |
 
 Ask only for what the plugin needs. Reviewers turn down plugins that ask for more, and admins are less likely to install them.
 
@@ -182,9 +192,12 @@ Plugins can talk to each other through events. `ctx.emit(name, payload)` sends a
 ctx.emit("newRecord", { login, time });
 
 // In any other plugin
-ctx.on<{ login: string; time: number }>("records:newRecord", (record, source) => {
-  ctx.log.info(`${source.plugin} reported ${record.login}`);
-});
+ctx.on<{ login: string; time: number }>(
+  "records:newRecord",
+  (record, source) => {
+    ctx.log.info(`${source.plugin} reported ${record.login}`);
+  },
+);
 // Every event of the "records" plugin
 ctx.on("records:*", (payload, source) => ctx.log.debug(source.name, payload));
 ```
@@ -204,27 +217,84 @@ A widget is a manialink page rendered from one of the package's templates. Templ
 - `widget`: a positioned frame with a script loop. Fill the blocks `widget` (the elements), `globals`, `script`, `main`, `events` and `loop`. Set `hideWhileDriving` to slide it away while the player drives.
 - `window`: a centred window with a title bar and a close button. Fill `window`, `globals`, `script`, `main`, `events` and `loop`.
 - `manialink`: a bare page; fill `content`.
+- `components/table`: a shared partial included with `{{> components/table table=data.table pos="0 -9" prev=(action "page-prev") next=(action "page-next")}}`. Its hash parameters are `table` (the object from `buildTable`), optional `pos` (frame position, default `0 0`), and optional `prev` and `next` action strings. It shows pager controls only for multiple pages and adds actions only for available directions.
+
+`buildTable` creates the data for the partial. Pass `columns` (`title`, `width`, optional `align`, `key`, `text(row)` and `color(row)`), the full `rows` list, and optional 1-based `page`, `pageSize` (default 10), `rowHeight` (default 4) and `empty` label. The helper slices the full row list to the requested page and returns layout, cell and pager data, clamping page to the available range.
+
+```hbs
+{{#extend "window"}}{{#content "window"}}
+  {{> components/table table=data.table prev=(action "page-prev") next=(action "page-next")}}
+{{/content}}{{/extend}}
+```
+
+```ts
+const pages = new Map<string, number>();
+ctx.action("page-prev", (answer) => turnPage(answer.login, -1));
+ctx.action("page-next", (answer) => turnPage(answer.login, 1));
+function turnPage(login: string, delta: number) {
+  if (!ctx.players.isAdmin(login)) return;
+  pages.set(login, Math.max(1, (pages.get(login) ?? 1) + delta));
+  showWindow(login);
+}
+function showWindow(login: string) {
+  const table = buildTable({
+    columns,
+    rows: allRows,
+    page: pages.get(login),
+    pageSize: 13,
+  });
+  pages.set(login, table.page);
+  ctx.ui
+    .window({
+      id: "list",
+      template: "windows/list",
+      login,
+      title: "List",
+      data: { table },
+    })
+    .display();
+}
+```
 
 ```hbs
 {{#extend "widget"}}
-{{#content "widget"}}
-<frame pos="0 0">
-  <quad pos="0 0" size="50 8" bgcolor="{{ @theme.quad.background }}" opacity="0.85" />
-  <label pos="2 -4" size="38 6" text="{{ data.text }}" valign="center" textsize="1.5" textcolor="{{ @theme.label.foreground }}" />
-  <label pos="45 -4" size="8 6" text="Hi" halign="center" valign="center" action="{{action "wave"}}" />
-</frame>
-{{/content}}
+  {{#content "widget"}}
+    <frame pos="0 0">
+      <quad
+        pos="0 0"
+        size="50 8"
+        bgcolor="{{@theme.quad.background}}"
+        opacity="0.85"
+      />
+      <label
+        pos="2 -4"
+        size="38 6"
+        text="{{data.text}}"
+        valign="center"
+        textsize="1.5"
+        textcolor="{{@theme.label.foreground}}"
+      />
+      <label
+        pos="45 -4"
+        size="8 6"
+        text="Hi"
+        halign="center"
+        valign="center"
+        action="{{action 'wave'}}"
+      />
+    </frame>
+  {{/content}}
 {{/extend}}
 ```
 
 ```ts
 const widget = ctx.ui.widget({
-  id: "greeting",               // letters, digits, - and _
+  id: "greeting", // letters, digits, - and _
   template: "widgets/greeting", // templates/widgets/greeting.hbs
-  withUpdate: false,            // see below
+  withUpdate: false, // see below
   position: { x: -158, y: 60 },
   hideWhileDriving: true,
-  login: undefined,             // set it to show the widget to one player only
+  login: undefined, // set it to show the widget to one player only
 });
 widget.setData({ text: "Hello" });
 widget.display();
@@ -235,7 +305,7 @@ ctx.action("wave", (answer) => ctx.chat.sendTo(answer.login, "Hi!"));
 - **Ids and actions are prefixed** with the plugin's slug: the page id is `plg.<slug>.<id>` and actions are `<slug>:<name>`. Use `{{action "name"}}` in templates (`{{action "pick-" uid}}` joins its arguments) and `ctx.action("name", ...)` in code. In ManiaScript, `{{actionPrefix}}` gives the prefix. A pattern like `ctx.action("pick-{uid}", ...)` passes the matched part as `params.uid`. Anyone can send any action from their game client, so check `answer.login` before doing something privileged.
 - **Update pages.** By default a widget is a pair of pages: `<template>` holds the layout and script, and `<template>-update` carries only data. `widget.update()` sends the data page, so the main page keeps its client-side state. With `withUpdate: false` there's a single page, and `display()` re-renders it.
 - **Windows** belong to one player: `ctx.ui.window({ id, template, login, title, onClose })`. The close button and `window.close()` remove the window and call `onClose`.
-- **The button bar** in the top-left corner: `ctx.ui.addButton({ name, icon, action })`, where `icon` is a text glyph or, with `type: "image"`, an image URL.
+- **The button bar** in the top-left corner: `ctx.ui.addButton({ name, icon, action, adminOnly })`, where `icon` is a text glyph or, with `type: "image"`, an image URL. With `adminOnly: true` (SDK 5) only connected panel admins see the button. That only hides it: anyone can send any action, so check `ctx.players.isAdmin(login)` in the handler. `isAdmin` picks up role changes within a minute; the button bar on the player's next reconnect.
 - **Theme.** Every template, including `-update` pages and inside `{{#each}}`, gets the panel's colors in two palettes, `@theme.quad.*` and `@theme.label.*`, each with `foreground`, `background`, `foregroundMuted` and `backgroundMuted`: three-digit hex without `#`, such as `DDD`. Pick the palette by element: every color attribute on a `<quad>` (`bgcolor`, `focusareacolor`) uses `quad`, and every color attribute on a `<label>` or `<entry>` (`textcolor`, `color`, `focusareacolor1`, `focusareacolor2`) uses `label`. In ManiaScript the same rule applies: `(x as CMlQuad).BgColor` uses `quad` and `(x as CMlLabel).TextColor` uses `label`. Use them instead of fixed colors, e.g. `bgcolor="{{ @theme.quad.background }}"` or `CL::Hex3ToRgb("{{ @theme.label.foreground }}")`, so plugins match the panel's windows. Declare `"sdk": 4` when you use them, so older panels refuse the plugin instead of rendering it without colors. Admins pick the colors in the **Theme** tab of a server's Plugins page, or per group under Admin, Groups. A server's own theme wins over its group's (the oldest group when several have one), then the default, `DDD`/`222`/`CCC`/`333` for both palettes. Plugins reload when the theme changes.
 - **Rules for pages.** A rendered page must be one `<manialink>` element with the page's own id, at most 128 KB. Pages that break this are refused with an error. Template helpers: `default`, `eq`, `bool`, `boolToNum`, `length`, `jsonLength`, `range`, `add`, `subtract`, `multiply`, `divide`, `action`, `actionPrefix`.
 
@@ -243,13 +313,13 @@ ctx.action("wave", (answer) => ctx.chat.sendTo(answer.login, "Hi!"));
 
 `configSchema` describes the settings form admins fill in on the server's Plugins page. It is a small subset of JSON Schema: an object whose `properties` are at most 50 fields. Property names start with a letter and continue with letters, digits or `_`, up to 64 characters, so `my-key` is not allowed. Keywords that aren't listed below, such as `pattern`, make the manifest invalid.
 
-| Field type | Keywords |
-|---|---|
-| `string` | `title`, `description`, `default`, `enum` (a dropdown), `minLength`, `maxLength`, `multiline` (a text area), `secret` |
-| `number`, `integer` | `title`, `description`, `default`, `minimum`, `maximum` |
-| `boolean` | `title`, `description`, `default` |
-| `array` | `title`, `description`, `default`, `minItems`, `maxItems`, `items` (any supported field), `addLabel`, `defaultFrom`, `csv` |
-| `object` | `title`, `description`, `properties`, `required` |
+| Field type          | Keywords                                                                                                                   |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `string`            | `title`, `description`, `default`, `enum` (a dropdown), `minLength`, `maxLength`, `multiline` (a text area), `secret`      |
+| `number`, `integer` | `title`, `description`, `default`, `minimum`, `maximum`                                                                    |
+| `boolean`           | `title`, `description`, `default`                                                                                          |
+| `array`             | `title`, `description`, `default`, `minItems`, `maxItems`, `items` (any supported field), `addLabel`, `defaultFrom`, `csv` |
+| `object`            | `title`, `description`, `properties`, `required`                                                                           |
 
 The root schema can optionally declare `tabs`, each with an `id`, `title`, and
 `properties` list of root field names. Tabs must have unique IDs and assign every
@@ -326,22 +396,22 @@ The answer is `{ status, headers, body, json() }`.
 
 Every plugin runs in its own QuickJS interpreter inside a WebAssembly instance, without Node.js, network or file access, and without the service's environment variables.
 
-| Limit | Value | When it's crossed |
-|---|---|---|
-| Memory | 32 MB | turned off |
-| Loading (evaluating the bundle and `create`) | 2 s | turned off |
-| One callback, timer or promise continuation | 100 ms | turned off |
-| CPU per minute, all callbacks together | 6 s | turned off |
-| `start()` and `stop()` finishing their async work | 10 s | load fails / logged |
-| Uncaught errors | 100 per minute | turned off |
-| Rate limit rejections | 300 per minute | turned off |
-| Server calls | 20 per second, bursts of 50 | `RateLimitError` |
-| Chat messages | 2 per second, bursts of 10 | `RateLimitError` |
-| Widget updates | 40 per second, bursts of 100 | `RateLimitError` |
-| Storage writes | 10 per second, bursts of 50 | `RateLimitError` |
-| Web and Nadeo requests | 1 per second, bursts of 10 | `RateLimitError` |
-| Admin notifications | 1 per minute, bursts of 3 | `RateLimitError` |
-| Timers / handlers / widgets / calls in flight | 100 / 1000 / 200 / 100 | `LimitError` |
+| Limit                                             | Value                        | When it's crossed   |
+| ------------------------------------------------- | ---------------------------- | ------------------- |
+| Memory                                            | 32 MB                        | turned off          |
+| Loading (evaluating the bundle and `create`)      | 2 s                          | turned off          |
+| One callback, timer or promise continuation       | 100 ms                       | turned off          |
+| CPU per minute, all callbacks together            | 6 s                          | turned off          |
+| `start()` and `stop()` finishing their async work | 10 s                         | load fails / logged |
+| Uncaught errors                                   | 100 per minute               | turned off          |
+| Rate limit rejections                             | 300 per minute               | turned off          |
+| Server calls                                      | 20 per second, bursts of 50  | `RateLimitError`    |
+| Chat messages                                     | 2 per second, bursts of 10   | `RateLimitError`    |
+| Widget updates                                    | 40 per second, bursts of 100 | `RateLimitError`    |
+| Storage writes                                    | 10 per second, bursts of 50  | `RateLimitError`    |
+| Web and Nadeo requests                            | 1 per second, bursts of 10   | `RateLimitError`    |
+| Admin notifications                               | 1 per minute, bursts of 3    | `RateLimitError`    |
+| Timers / handlers / widgets / calls in flight     | 100 / 1000 / 200 / 100       | `LimitError`        |
 
 A plugin that is turned off stays off on that server until an admin turns it back on. The admins get a notification saying why.
 

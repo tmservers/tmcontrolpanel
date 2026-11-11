@@ -116,6 +116,9 @@ export interface ActionButton {
   type?: "image" | "text";
   // Action name registered with ctx.action()
   action?: string;
+  // Only connected panel admins of this server see the button (SDK 5). Still check
+  // ctx.players.isAdmin in the action handler: anyone can send any action.
+  adminOnly?: boolean;
 }
 
 export interface ManialinkAnswer {
@@ -168,7 +171,10 @@ export interface Logger {
 }
 
 export type CommandHandler = (args: string[], login: string) => unknown;
-export type ActionHandler = (answer: ManialinkAnswer, params: Record<string, string>) => unknown;
+export type ActionHandler = (
+  answer: ManialinkAnswer,
+  params: Record<string, string>,
+) => unknown;
 
 // What a plugin can use. Calls behind a capability the plugin didn't declare throw.
 export interface PluginContext<Config = Record<string, unknown>> {
@@ -182,7 +188,10 @@ export interface PluginContext<Config = Record<string, unknown>> {
   saveConfig(config: Config): Promise<void>;
   serverName(): string | null;
 
-  on<K extends PluginEventName>(event: K, handler: (...args: PluginEvents[K]) => unknown): void;
+  on<K extends PluginEventName>(
+    event: K,
+    handler: (...args: PluginEvents[K]) => unknown,
+  ): void;
   on<T = unknown>(
     event: CustomEventKey,
     handler: (payload: T, source: CustomEventSource) => unknown,
@@ -213,6 +222,8 @@ export interface PluginContext<Config = Record<string, unknown>> {
   };
   readonly players: {
     get(login: string): Promise<PlayerInfo>;
+    // Whether the login holds a panel admin role on this server (SDK 5)
+    isAdmin(login: string): Promise<boolean>;
   };
 
   // Capability "ui"
@@ -247,7 +258,10 @@ export interface PluginContext<Config = Record<string, unknown>> {
   // Capability "nadeo:read"
   readonly nadeo: {
     worldRecord(mapUid: string): Promise<LeaderboardEntry | null>;
-    personalBests(mapUid: string, accountIds: string[]): Promise<Record<string, number>>;
+    personalBests(
+      mapUid: string,
+      accountIds: string[],
+    ): Promise<Record<string, number>>;
     accountNames(accountIds: string[]): Promise<Record<string, string>>;
   };
   // Capability "notifications"

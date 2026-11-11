@@ -58,6 +58,7 @@ import { LiveSync } from "./live-sync";
 import { MapCatalog } from "./map-catalog";
 import { MapList } from "./map-list";
 import { MatchRecorder } from "./match-recorder";
+import { ServerAdmins } from "./server-admins";
 import { ServerCommands } from "./server-commands";
 import type { ServerEventMap } from "./server-events";
 
@@ -162,6 +163,15 @@ export class ServerRuntime {
       theme: () => state.theme,
     };
     const actionGroup = new ActionGroup(manialinkDeps);
+    const admins = new ServerAdmins(
+      serverId,
+      deps.systemCommands
+        ? (id, login) => deps.systemCommands!.isAdmin(id, login)
+        : null,
+      clock,
+      log,
+    );
+    admins.onChange((logins) => actionGroup.setAdmins(logins));
     const mapList = new MapList(gbx, log);
     const catalog = new MapCatalog(deps.maps, deps.mapMetadata, clock, log);
 
@@ -251,6 +261,7 @@ export class ServerRuntime {
             actions,
             manialinkDeps,
             actionGroup,
+            admins,
             mapList,
             catalog,
             records: deps.records,
@@ -285,9 +296,16 @@ export class ServerRuntime {
     });
 
     bus.on("playerConnect", (player) =>
-      this.manialinks.onPlayerConnect(player.login),
+      Promise.all([
+        this.manialinks.onPlayerConnect(player.login),
+        admins.playerConnected(player.login),
+      ]),
+    );
+    bus.on("playerList", (players) =>
+      admins.sync(players.map((player) => player.login)),
     );
     bus.on("playerDisconnect", (login) => {
+      admins.playerDisconnected(login);
       this.codriverWindows?.forget(login);
       this.manialinks.onPlayerDisconnect(login);
     });

@@ -1,11 +1,11 @@
 import { packPlugin } from "@tmcontrolpanel/plugin-sdk/cli";
+import { DEFAULT_THEME, type PluginCustomEvent } from "@tmcontrolpanel/shared";
 import { createPluginPackage } from "@tmcontrolpanel/shared/plugin-package";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { DEFAULT_THEME, type PluginCustomEvent } from "@tmcontrolpanel/shared";
 import { DEFAULT_SANDBOX_LIMITS } from "../../src/core/plugins/sandbox/limits";
 import { definePlugin, type PluginContext } from "../../src/core/plugins/sdk";
 import { flush } from "../fakes/clock";
@@ -18,7 +18,9 @@ import {
   type Harness,
 } from "../fakes/harness";
 
-const EXAMPLE = fileURLToPath(new URL("../../../../packages/plugin-sdk/examples/hello", import.meta.url));
+const EXAMPLE = fileURLToPath(
+  new URL("../../../../packages/plugin-sdk/examples/hello", import.meta.url),
+);
 
 let outDir: string;
 let hello: Uint8Array;
@@ -49,7 +51,10 @@ function testPackage(
     }),
     "index.js": `globalThis.__tmcpRegister({ create(ctx) { ${code} } });`,
     ...Object.fromEntries(
-      Object.entries(templates).map(([name, source]) => [`templates/${name}.hbs`, source]),
+      Object.entries(templates).map(([name, source]) => [
+        `templates/${name}.hbs`,
+        source,
+      ]),
     ),
   });
 }
@@ -67,7 +72,10 @@ const WIDGET = `{{#extend "widget"}}{{#content "widget"}}<label text="{{ data.te
 
 describe("sandboxed plugins", () => {
   it("runs the example plugin end to end", async () => {
-    const h = await createHarness({ packages: [{ bytes: hello }], players: [player("p1")] });
+    const h = await createHarness({
+      packages: [{ bytes: hello }],
+      players: [player("p1")],
+    });
     expect(h.runtime.plugins.loadedIds()).toContain("hello");
 
     const xml = h.session.lastManialink("plg.hello.greeting");
@@ -80,7 +88,9 @@ describe("sandboxed plugins", () => {
 
     await h.click("p1", "hello:wave");
     expect(lastChatTo(h)).toEqual(["Welcome Nick p1! (greeting #2)", "p1"]);
-    expect(h.session.lastManialink("plg.hello.greeting")).toContain("Welcome! 2 greetings so far");
+    expect(h.session.lastManialink("plg.hello.greeting")).toContain(
+      "Welcome! 2 greetings so far",
+    );
 
     // Without the prefix the action belongs to nobody
     await h.click("p1", "wave");
@@ -92,18 +102,25 @@ describe("sandboxed plugins", () => {
       packages: [{ bytes: hello, config: { greeting: "Hoi" } }],
       players: [player("p1")],
     });
-    expect(h.session.lastManialink("plg.hello.greeting")).toContain("Hoi! 0 greetings");
+    expect(h.session.lastManialink("plg.hello.greeting")).toContain(
+      "Hoi! 0 greetings",
+    );
 
     record(h, "hello").config = { greeting: "Moin", showWidget: false };
     await h.runtime.refreshPlugins();
-    expect(h.runtime.manialinks.displayedIds()).not.toContain("plg.hello.greeting");
+    expect(h.runtime.manialinks.displayedIds()).not.toContain(
+      "plg.hello.greeting",
+    );
 
     await h.chat("p1", "/hello");
     expect(lastChatTo(h)).toEqual(["Moin Nick p1! (greeting #1)", "p1"]);
   });
 
   it("answers /help with the manifest help text", async () => {
-    const h = await createHarness({ packages: [{ bytes: hello }], players: [player("p1")] });
+    const h = await createHarness({
+      packages: [{ bytes: hello }],
+      players: [player("p1")],
+    });
     await h.chat("p1", "/help hello");
     expect(lastChatTo(h)).toEqual([
       "/hello - the server says hi and tells you how often it did",
@@ -144,10 +161,16 @@ describe("sandboxed plugins", () => {
       ],
     });
     expect(stored(h, "map")).toBe("map-a-uid");
-    expect(stored(h, "raw-page")).toBe("CapabilityError: The plugin may not call SendDisplayManialinkPage");
-    expect(stored(h, "kick")).toBe("CapabilityError: The plugin may not call Kick");
+    expect(stored(h, "raw-page")).toBe(
+      "CapabilityError: The plugin may not call SendDisplayManialinkPage",
+    );
+    expect(stored(h, "kick")).toBe(
+      "CapabilityError: The plugin may not call Kick",
+    );
     expect(stored(h, "script-read")).toBe(null);
-    expect(stored(h, "script-write")).toMatch(/needs the "mode:control" capability/);
+    expect(stored(h, "script-write")).toMatch(
+      /needs the "mode:control" capability/,
+    );
     expect(h.session.callsTo("Kick")).toHaveLength(0);
   });
 
@@ -173,8 +196,12 @@ describe("sandboxed plugins", () => {
         },
       ],
     });
-    expect(stored(h, "spoof")).toBe('The manialink id must be "plg.test-plugin.spoof"');
-    expect(stored(h, "nested")).toBe("A page must contain exactly one <manialink> element");
+    expect(stored(h, "spoof")).toBe(
+      'The manialink id must be "plg.test-plugin.spoof"',
+    );
+    expect(stored(h, "nested")).toBe(
+      "A page must contain exactly one <manialink> element",
+    );
     expect(stored(h, "fine")).toBe("shown");
     expect(h.session.sentManialinkIds()).not.toContain("map-info-widget");
     expect(h.session.sentManialinkIds()).toContain("plg.test-plugin.fine");
@@ -194,9 +221,15 @@ describe("sandboxed plugins", () => {
         },
       ],
     });
-    const pages = h.session.sent.map((call) => String(call.params[0])).join("\n");
-    expect(pages).toContain(`<quad bgcolor="${DEFAULT_THEME.quad.background}"/>`);
-    expect(pages).toContain(`<label textcolor="${DEFAULT_THEME.label.foregroundMuted}"/>`);
+    const pages = h.session.sent
+      .map((call) => String(call.params[0]))
+      .join("\n");
+    expect(pages).toContain(
+      `<quad bgcolor="${DEFAULT_THEME.quad.background}"/>`,
+    );
+    expect(pages).toContain(
+      `<label textcolor="${DEFAULT_THEME.label.foregroundMuted}"/>`,
+    );
   });
 
   it("re-renders plugin pages when the server's theme changes", async () => {
@@ -221,14 +254,23 @@ describe("sandboxed plugins", () => {
     await h.runtime.applyServerUpdate();
     await flush();
 
-    const pages = h.session.sent.map((call) => String(call.params[0])).join("\n");
+    const pages = h.session.sent
+      .map((call) => String(call.params[0]))
+      .join("\n");
     expect(pages).toContain('<quad bgcolor="0A0"/>');
     expect(h.runtime.state.theme.quad.background).toBe("0A0");
   });
 
   it("turns off a plugin that hangs and tells the admins", async () => {
     const h = await createHarness({
-      packages: [{ bytes: testPackage(`ctx.command("spin", () => { for (;;) {} }); return {};`, { commands: ["spin"] }) }],
+      packages: [
+        {
+          bytes: testPackage(
+            `ctx.command("spin", () => { for (;;) {} }); return {};`,
+            { commands: ["spin"] },
+          ),
+        },
+      ],
       players: [player("p1")],
     });
     expect(h.runtime.plugins.loadedIds()).toContain("test-plugin");
@@ -238,13 +280,22 @@ describe("sandboxed plugins", () => {
 
     expect(record(h, "test-plugin").enabled).toBe(false);
     expect(h.runtime.plugins.loadedIds()).not.toContain("test-plugin");
-    expect(h.notifications.created.map((n) => [n.type, n.description])).toEqual([
-      ["pluginDisabled", "The plugin ran longer than its time limit (command /spin)"],
-    ]);
+    expect(h.notifications.created.map((n) => [n.type, n.description])).toEqual(
+      [
+        [
+          "pluginDisabled",
+          "The plugin ran longer than its time limit (command /spin)",
+        ],
+      ],
+    );
   });
 
   it("turns off a plugin that hangs while loading or runs out of memory", async () => {
-    const limits = { ...DEFAULT_SANDBOX_LIMITS, loadMs: 50, memoryBytes: 8 * 1024 * 1024 };
+    const limits = {
+      ...DEFAULT_SANDBOX_LIMITS,
+      loadMs: 50,
+      memoryBytes: 8 * 1024 * 1024,
+    };
     const hang = await createHarness({
       packages: [{ bytes: testPackage(`for (;;) {}`) }],
       sandboxLimits: limits,
@@ -253,17 +304,32 @@ describe("sandboxed plugins", () => {
     expect(record(hang, "test-plugin").enabled).toBe(false);
 
     const hog = await createHarness({
-      packages: [{ bytes: testPackage(`const a = []; for (;;) a.push({ n: a.length, s: "x" + a.length }); return {};`) }],
+      packages: [
+        {
+          bytes: testPackage(
+            `const a = []; for (;;) a.push({ n: a.length, s: "x" + a.length }); return {};`,
+          ),
+        },
+      ],
       sandboxLimits: { ...limits, loadMs: 5000 },
     });
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(record(hog, "test-plugin").enabled).toBe(false);
-    expect(hog.notifications.created[0]?.description).toMatch(/more memory than its limit/);
+    expect(hog.notifications.created[0]?.description).toMatch(
+      /more memory than its limit/,
+    );
   });
 
   it("turns off a plugin that keeps throwing", async () => {
     const h = await createHarness({
-      packages: [{ bytes: testPackage(`ctx.command("boom", () => { throw new Error("nope"); }); return {};`, { commands: ["boom"] }) }],
+      packages: [
+        {
+          bytes: testPackage(
+            `ctx.command("boom", () => { throw new Error("nope"); }); return {};`,
+            { commands: ["boom"] },
+          ),
+        },
+      ],
       players: [player("p1")],
       sandboxLimits: { ...DEFAULT_SANDBOX_LIMITS, errorsPerMinute: 3 },
     });
@@ -272,7 +338,9 @@ describe("sandboxed plugins", () => {
     await h.chat("p1", "/boom");
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(record(h, "test-plugin").enabled).toBe(false);
-    expect(h.notifications.created[0]?.description).toMatch(/kept failing \(command \/boom: nope\)/);
+    expect(h.notifications.created[0]?.description).toMatch(
+      /kept failing \(command \/boom: nope\)/,
+    );
   });
 
   it("only registers manifest commands and plugin events", async () => {
@@ -289,8 +357,12 @@ describe("sandboxed plugins", () => {
         },
       ],
     });
-    expect(stored(h, "command")).toBe("/admin is not one of the commands in the manifest");
-    expect(stored(h, "answers")).toBe('Unknown event "playerManialinkPageAnswer"');
+    expect(stored(h, "command")).toBe(
+      "/admin is not one of the commands in the manifest",
+    );
+    expect(stored(h, "answers")).toBe(
+      'Unknown event "playerManialinkPageAnswer"',
+    );
     expect(stored(h, "finish")).toBe("ok");
   });
 
@@ -334,7 +406,9 @@ describe("sandboxed plugins", () => {
     });
     expect(stored(h, "all", "listener")).toBe(1);
     expect(stored(h, "other", "listener")).toBeUndefined();
-    expect(seen).toEqual([{ plugin: "scorer", name: "point", payload: { login: "p1", points: 3 } }]);
+    expect(seen).toEqual([
+      { plugin: "scorer", name: "point", payload: { login: "p1", points: 3 } },
+    ]);
 
     // Service code emits the same way
     probeCtx!.emit("hello", "hi");
@@ -357,7 +431,9 @@ describe("sandboxed plugins", () => {
         },
       ],
     });
-    expect(stored(h, "name")).toBe("Event names use 1-64 letters, digits, - _ and .");
+    expect(stored(h, "name")).toBe(
+      "Event names use 1-64 letters, digits, - _ and .",
+    );
     expect(stored(h, "size")).toBe("Event payloads may be at most 64 KB");
     expect(stored(h, "key")).toBe('Unknown event "not-a-key"');
     expect(stored(h, "ok")).toBe("ok");
@@ -394,19 +470,28 @@ describe("sandboxed plugins", () => {
                  onClose: () => ctx.storage.set("closed", true) }).display();
              } };`,
             { capabilities: ["ui", "storage"] },
-            { win: `{{#extend "window"}}{{#content "window"}}<label text="{{ title }}"/>{{/content}}{{/extend}}`, "win-update": `{{#extend "manialink"}}{{/extend}}` },
+            {
+              win: `{{#extend "window"}}{{#content "window"}}<label text="{{ title }}"/>{{/content}}{{/extend}}`,
+              "win-update": `{{#extend "manialink"}}{{/extend}}`,
+            },
           ),
         },
       ],
       players: [player("p1"), player("p2")],
     });
-    expect(h.runtime.manialinks.displayedIds("p1")).toContain("plg.test-plugin.win");
+    expect(h.runtime.manialinks.displayedIds("p1")).toContain(
+      "plg.test-plugin.win",
+    );
 
     await h.click("p2", "close-window-plg.test-plugin.win");
-    expect(h.runtime.manialinks.displayedIds("p1")).toContain("plg.test-plugin.win");
+    expect(h.runtime.manialinks.displayedIds("p1")).toContain(
+      "plg.test-plugin.win",
+    );
 
     await h.click("p1", "close-window-plg.test-plugin.win");
-    expect(h.runtime.manialinks.displayedIds("p1")).not.toContain("plg.test-plugin.win");
+    expect(h.runtime.manialinks.displayedIds("p1")).not.toContain(
+      "plg.test-plugin.win",
+    );
     expect(stored(h, "closed")).toBe(true);
   });
 
@@ -463,15 +548,22 @@ describe("sandboxed plugins", () => {
       body: "hi",
       headers: { "x-key": "k" },
     });
-    expect(stored(h, "other")).toBe('The plugin did not declare "http:evil.example.com"');
+    expect(stored(h, "other")).toBe(
+      'The plugin did not declare "http:evil.example.com"',
+    );
     expect(stored(h, "plain")).toBe("Only https:// URLs are allowed");
     expect(stored(h, "port")).toBe("Only the default HTTPS port is allowed");
     expect(stored(h, "header")).toBe("Header Host is not allowed");
   });
 
   it("reloads a plugin when another version is installed", async () => {
-    const v1 = testPackage(`return { start: () => ctx.storage.set("version", 1) };`);
-    const v2 = testPackage(`return { start: () => ctx.storage.set("version", 2) };`, { version: "2.0.0" });
+    const v1 = testPackage(
+      `return { start: () => ctx.storage.set("version", 1) };`,
+    );
+    const v2 = testPackage(
+      `return { start: () => ctx.storage.set("version", 2) };`,
+      { version: "2.0.0" },
+    );
     const h = await createHarness({ packages: [{ bytes: v1 }] });
     expect(stored(h, "version")).toBe(1);
 
@@ -485,7 +577,15 @@ describe("sandboxed plugins", () => {
 
   it("doesn't load a package whose templates don't compile", async () => {
     const h = await createHarness({
-      packages: [{ bytes: testPackage(`return {};`, {}, { broken: "{{#if open}}never closed" }) }],
+      packages: [
+        {
+          bytes: testPackage(
+            `return {};`,
+            {},
+            { broken: "{{#if open}}never closed" },
+          ),
+        },
+      ],
     });
     expect(h.runtime.plugins.loadedIds()).toEqual([]);
   });
@@ -493,10 +593,96 @@ describe("sandboxed plugins", () => {
   it("refuses a stored package that doesn't match its checksum", async () => {
     const h = await createHarness({ packages: [{ bytes: hello }] });
     const tampered = testPackage(`return {};`, { slug: "hello" });
-    h.pluginPackages.packages.set(record(h, "hello").package!.versionId, tampered);
+    h.pluginPackages.packages.set(
+      record(h, "hello").package!.versionId,
+      tampered,
+    );
     record(h, "hello").package!.grantedCapabilities = ["ui"];
     await h.runtime.reloadPlugins();
     // The cached copy of the original package is still what runs
     expect(h.runtime.plugins.loadedIds()).toContain("hello");
+  });
+
+  it("renders the built-in table partial and prefixes its available actions", async () => {
+    const table = {
+      width: 20,
+      rowHeight: 4,
+      textY: -2,
+      pagerY: -13,
+      columns: [{ title: "Player", x: 1, width: 8, halign: "left" }],
+      rows: [
+        {
+          y: -4,
+          odd: false,
+          cells: [{ text: "Ada", color: null, x: 1, width: 8, halign: "left" }],
+        },
+      ],
+      page: 1,
+      pages: 2,
+      total: 2,
+      from: 1,
+      to: 1,
+      hasPrev: false,
+      hasNext: true,
+      empty: "Empty",
+    };
+    const template = `{{#extend "window"}}{{#content "window"}}{{> components/table table=data.table pos="0 -9" prev=(action "page-prev") next=(action "page-next")}}{{/content}}{{/extend}}`;
+    const h = await createHarness({
+      packages: [
+        {
+          bytes: testPackage(
+            `return { start() { ctx.ui.window({ id: "table", template: "table", login: "p1", title: "Table", withUpdate: false, data: ${JSON.stringify({ table })} }).display(); } };`,
+            { sdk: 5, capabilities: ["ui"] },
+            { table: template },
+          ),
+        },
+      ],
+      players: [player("p1")],
+    });
+    const page = h.session.lastManialink("plg.test-plugin.table")!;
+    expect(page).toContain("Player");
+    expect(page).toContain("Ada");
+    expect(page).toContain('action="test-plugin:page-next"');
+    expect(page).not.toContain('action="test-plugin:page-prev"');
+  });
+
+  it("bridges admin checks and admin-only action buttons", async () => {
+    const h = await createHarness({
+      players: [player("x")],
+      systemCommands: {
+        isAdmin: async (_serverId, login) => login === "x",
+        checkDatabase: async () => {},
+        checkRedis: async () => {},
+      },
+      packages: [
+        {
+          bytes: testPackage(
+            `
+        return { async start() {
+          await ctx.storage.set("admin", await ctx.players.isAdmin("x"));
+          ctx.ui.addButton({ name: "staff", icon: "S", action: "staff", adminOnly: true });
+        } };`,
+            { sdk: 5, capabilities: ["ui", "storage"] },
+          ),
+        },
+      ],
+    });
+    expect(stored(h, "admin")).toBe(true);
+    expect(record(h, "test-plugin").enabled).toBe(true);
+    const bars = h.session.sent.filter(
+      (s) =>
+        s.method.startsWith("SendDisplayManialinkPage") &&
+        String(s.params.at(-3)).includes('id="action-group-widget"'),
+    );
+    const toAdmin = bars.filter(
+      (s) => s.method.endsWith("ToLogin") && s.params[0] === "x",
+    );
+    expect(String(toAdmin.at(-1)?.params[1])).toContain("test-plugin:staff");
+    const broadcast = bars.filter((s) => !s.method.endsWith("ToLogin"));
+    expect(
+      broadcast.every(
+        (s) => !String(s.params[0]).includes("test-plugin:staff"),
+      ),
+    ).toBe(true);
   });
 });

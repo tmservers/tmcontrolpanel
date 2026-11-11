@@ -16,7 +16,8 @@ export function guestRuntime(global: any): void {
   "use strict";
 
   const hostCall: (method: string, args: string) => string = global.__host_call;
-  const hostAsync: (id: number, method: string, args: string) => void = global.__host_async;
+  const hostAsync: (id: number, method: string, args: string) => void =
+    global.__host_async;
   const Handlebars = global.Handlebars;
   const layouts = global.__tmcpLayouts;
   delete global.__host_call;
@@ -25,7 +26,9 @@ export function guestRuntime(global: any): void {
   delete global.__tmcpLayouts;
 
   const toError = (raw: any): Error => {
-    const error = new Error(raw && typeof raw.message === "string" ? raw.message : "Host call failed");
+    const error = new Error(
+      raw && typeof raw.message === "string" ? raw.message : "Host call failed",
+    );
     error.name = raw && typeof raw.name === "string" ? raw.name : "Error";
     return error;
   };
@@ -37,7 +40,10 @@ export function guestRuntime(global: any): void {
   };
 
   let nextCallId = 1;
-  const pending = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();
+  const pending = new Map<
+    number,
+    { resolve: (value: unknown) => void; reject: (error: Error) => void }
+  >();
   const callAsync = (method: string, ...args: unknown[]): Promise<any> =>
     new Promise((resolve, reject) => {
       const id = nextCallId++;
@@ -64,7 +70,11 @@ export function guestRuntime(global: any): void {
   };
 
   // Plugin callbacks never throw into the host; failures and rejections are reported
-  const invoke = (where: string, fn: (...args: any[]) => unknown, args: unknown[]) => {
+  const invoke = (
+    where: string,
+    fn: (...args: any[]) => unknown,
+    args: unknown[],
+  ) => {
     try {
       const result: any = fn(...args);
       if (result && typeof result.then === "function") {
@@ -102,12 +112,16 @@ export function guestRuntime(global: any): void {
     action: (...args: unknown[]) => prefix + args.slice(0, -1).join(""),
     actionPrefix: () => prefix,
   };
-  for (const name of Object.keys(helpers)) hb.registerHelper(name, helpers[name]);
-  hb.registerHelper("range", function (this: unknown, from: number, to: number, options: any) {
-    let out = "";
-    for (let i = from; i < to; i++) out += options.fn({ i });
-    return out;
-  });
+  for (const name of Object.keys(helpers))
+    hb.registerHelper(name, helpers[name]);
+  hb.registerHelper(
+    "range",
+    function (this: unknown, from: number, to: number, options: any) {
+      let out = "";
+      for (let i = from; i < to; i++) out += options.fn({ i });
+      return out;
+    },
+  );
 
   // Precompiled by the host; evaluating the specs is cheap compared to parsing templates here
   const specs: Record<string, string> = info.templates;
@@ -129,7 +143,8 @@ export function guestRuntime(global: any): void {
   const handlers = new Map<number, Entry>();
   let nextHandler = 1;
   const handler = (label: string, fn: unknown): number => {
-    if (typeof fn !== "function") throw new TypeError(`${label}: handler must be a function`);
+    if (typeof fn !== "function")
+      throw new TypeError(`${label}: handler must be a function`);
     const id = nextHandler++;
     handlers.set(id, { label, fn: fn as Entry["fn"] });
     return id;
@@ -141,15 +156,23 @@ export function guestRuntime(global: any): void {
   global.__tmcpRegister = (value: PluginDefinition<any>) => {
     if (definition) throw new Error("definePlugin() was called more than once");
     if (!value || typeof value.create !== "function") {
-      throw new TypeError("definePlugin() needs an object with a create(ctx) function");
+      throw new TypeError(
+        "definePlugin() needs an object with a create(ctx) function",
+      );
     }
     definition = value;
   };
 
-  const makePage = (kind: "widget" | "window", options: WidgetOptions | WindowOptions) => {
-    if (!options || typeof options !== "object") throw new TypeError("Options are required");
-    const onClose = kind === "window" ? (options as WindowOptions).onClose : undefined;
-    const closeHandler = typeof onClose === "function" ? handler("window close", onClose) : null;
+  const makePage = (
+    kind: "widget" | "window",
+    options: WidgetOptions | WindowOptions,
+  ) => {
+    if (!options || typeof options !== "object")
+      throw new TypeError("Options are required");
+    const onClose =
+      kind === "window" ? (options as WindowOptions).onClose : undefined;
+    const closeHandler =
+      typeof onClose === "function" ? handler("window close", onClose) : null;
     const withUpdate = options.withUpdate !== false;
     const page = call("ui.create", kind, {
       id: options.id,
@@ -165,7 +188,14 @@ export function guestRuntime(global: any): void {
     const hideWhileDriving = options.hideWhileDriving ?? false;
     const template = options.template;
 
-    const contextFor = () => ({ id: page.id, position, size, title, hideWhileDriving, data });
+    const contextFor = () => ({
+      id: page.id,
+      position,
+      size,
+      title,
+      hideWhileDriving,
+      data,
+    });
     const updateXml = () =>
       withUpdate
         ? render(`${template}-update`, { id: `${page.id}-update`, title, data })
@@ -174,7 +204,12 @@ export function guestRuntime(global: any): void {
     const result: Window = {
       id: page.id,
       display() {
-        call("ui.show", page.handle, render(template, contextFor()), updateXml());
+        call(
+          "ui.show",
+          page.handle,
+          render(template, contextFor()),
+          updateXml(),
+        );
       },
       update() {
         if (withUpdate) call("ui.update", page.handle, updateXml());
@@ -205,7 +240,9 @@ export function guestRuntime(global: any): void {
         size = { x: Number(value.x), y: Number(value.y) };
       },
     };
-    return kind === "window" ? Object.freeze(result) : Object.freeze(result as Widget);
+    return kind === "window"
+      ? Object.freeze(result)
+      : Object.freeze(result as Widget);
   };
 
   const log = (level: string) => (message: string, data?: unknown) =>
@@ -274,11 +311,15 @@ export function guestRuntime(global: any): void {
         return call("live", "isReverseCup");
       },
       findActivePlayer: (login: string) => call("live.findPlayer", login),
-      reverseCupGetPlayerStatus: (login: string) => call("live.reverseCupStatus", login),
+      reverseCupGetPlayerStatus: (login: string) =>
+        call("live.reverseCupStatus", login),
       reverseCupGetPointsRepartition: (playerCount: number) =>
         call("live.reverseCupRepartition", Number(playerCount)),
     }),
-    players: Object.freeze({ get: (login: string) => callAsync("players.get", login) }),
+    players: Object.freeze({
+      get: (login: string) => callAsync("players.get", login),
+      isAdmin: (login: string) => callAsync("players.isAdmin", login),
+    }),
 
     ui: Object.freeze({
       widget: (options: WidgetOptions) => makePage("widget", options) as Widget,
@@ -288,11 +329,13 @@ export function guestRuntime(global: any): void {
     }),
     chat: Object.freeze({
       send: (message: string) => callAsync("chat.send", message),
-      sendTo: (login: string, message: string) => callAsync("chat.sendTo", login, message),
+      sendTo: (login: string, message: string) =>
+        callAsync("chat.sendTo", login, message),
     }),
     storage: Object.freeze({
       get: (key: string) => callAsync("storage.get", key),
-      set: (key: string, value: unknown) => callAsync("storage.set", key, value),
+      set: (key: string, value: unknown) =>
+        callAsync("storage.set", key, value),
       delete: (key: string) => callAsync("storage.delete", key),
       keys: (keyPrefix?: string) => callAsync("storage.keys", keyPrefix ?? ""),
     }),
@@ -303,22 +346,26 @@ export function guestRuntime(global: any): void {
     }),
     maps: Object.freeze({
       findByUid: (uid: string) => callAsync("maps.findByUid", uid),
-      findByFileNames: (fileNames: string[]) => callAsync("maps.findByFileNames", fileNames),
+      findByFileNames: (fileNames: string[]) =>
+        callAsync("maps.findByFileNames", fileNames),
     }),
     nadeo: Object.freeze({
       worldRecord: (mapUid: string) => callAsync("nadeo.worldRecord", mapUid),
       personalBests: (mapUid: string, accountIds: string[]) =>
         callAsync("nadeo.personalBests", mapUid, accountIds),
-      accountNames: (accountIds: string[]) => callAsync("nadeo.accountNames", accountIds),
+      accountNames: (accountIds: string[]) =>
+        callAsync("nadeo.accountNames", accountIds),
     }),
     notifyAdmins: (message: string, description?: string) =>
       callAsync("notifyAdmins", message, description ?? null),
     server: Object.freeze({
       setPaused: (paused: boolean) => callAsync("server.setPaused", paused),
-      setScriptName: (script: string) => callAsync("server.setScriptName", script),
+      setScriptName: (script: string) =>
+        callAsync("server.setScriptName", script),
     }),
     gbx: Object.freeze({
-      call: (method: string, ...params: unknown[]) => callAsync("gbx.call", method, params),
+      call: (method: string, ...params: unknown[]) =>
+        callAsync("gbx.call", method, params),
       callScript: (method: string, ...params: unknown[]) =>
         callAsync("gbx.callScript", method, params),
     }),
@@ -337,7 +384,8 @@ export function guestRuntime(global: any): void {
 
   const bridge = {
     create() {
-      if (!definition) throw new Error("The plugin never called definePlugin()");
+      if (!definition)
+        throw new Error("The plugin never called definePlugin()");
       const created = definition.create(ctx);
       instance = created && typeof created === "object" ? created : {};
     },
@@ -371,7 +419,9 @@ export function guestRuntime(global: any): void {
 
 // The script the sandbox evaluates. tsx (dev mode) compiles with keepNames, which wraps functions in
 // __name() calls that refer to a helper outside guestRuntime; this scope supplies it.
-export function guestRuntimeScript(source: string = guestRuntime.toString()): string {
+export function guestRuntimeScript(
+  source: string = guestRuntime.toString(),
+): string {
   return `(function () {
   var __name = function (target, value) {
     try { Object.defineProperty(target, "name", { value: value, configurable: true }); } catch (e) {}

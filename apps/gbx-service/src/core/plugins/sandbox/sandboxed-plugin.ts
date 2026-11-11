@@ -30,7 +30,12 @@ import {
   type SandboxLimits,
 } from "./limits";
 import { checkManialink } from "./manialink-check";
-import { describeError, GuestError, QuickJsVm, SandboxFault } from "./quickjs-vm";
+import {
+  describeError,
+  GuestError,
+  QuickJsVm,
+  SandboxFault,
+} from "./quickjs-vm";
 
 export interface SandboxAssets {
   wasmModule: WebAssembly.Module;
@@ -58,11 +63,20 @@ class HostError extends Error {
 }
 
 const capabilityError = (capability: string) =>
-  new HostError("CapabilityError", `The plugin did not declare the "${capability}" capability`);
+  new HostError(
+    "CapabilityError",
+    `The plugin did not declare the "${capability}" capability`,
+  );
 const invalid = (message: string) => new HostError("ValidationError", message);
 
 const LOG_LEVELS = ["debug", "info", "warn", "error"] as const;
-const LIVE_FIELDS = ["liveInfo", "activePlayers", "activeMapUid", "roundNumber", "isReverseCup"] as const;
+const LIVE_FIELDS = [
+  "liveInfo",
+  "activePlayers",
+  "activeMapUid",
+  "roundNumber",
+  "isReverseCup",
+] as const;
 const PAGE_ID = /^[A-Za-z0-9_-]{1,64}$/;
 const ACTION_NAME = /^[A-Za-z0-9_\-.{}]{1,100}$/;
 const STORAGE_KEY = /^[\x21-\x7e]+$/;
@@ -89,8 +103,10 @@ interface Page {
 }
 
 function text(value: unknown, name: string, max: number): string {
-  if (typeof value !== "string" || value.length === 0) throw invalid(`${name} must be text`);
-  if (value.length > max) throw invalid(`${name} may be at most ${max} characters`);
+  if (typeof value !== "string" || value.length === 0)
+    throw invalid(`${name} must be text`);
+  if (value.length > max)
+    throw invalid(`${name} may be at most ${max} characters`);
   return value;
 }
 
@@ -158,12 +174,17 @@ export class SandboxedPlugin implements PluginInstance {
     this.pluginRowId = record.pluginId;
     // Only what the manifest declares and the admin granted
     const granted = new Set(record.package.grantedCapabilities);
-    this.capabilities = new Set(pkg.manifest.capabilities.filter((c) => granted.has(c)));
+    this.capabilities = new Set(
+      pkg.manifest.capabilities.filter((c) => granted.has(c)),
+    );
     this.gbxMethods = allowedGbxMethods([...this.capabilities]);
     this.prefix = `${pkg.manifest.slug}:`;
     const now = () => deps.clock.now();
     this.buckets = Object.fromEntries(
-      Object.entries(RATE_LIMITS).map(([name, limit]) => [name, new TokenBucket(limit, now)]),
+      Object.entries(RATE_LIMITS).map(([name, limit]) => [
+        name,
+        new TokenBucket(limit, now),
+      ]),
     ) as Record<RateLimitName, TokenBucket>;
     this.cpu = new MinuteCounter(now);
     this.errors = new MinuteCounter(now);
@@ -199,7 +220,9 @@ export class SandboxedPlugin implements PluginInstance {
     } catch (error) {
       this.teardown();
       if (error instanceof SandboxFault) this.fault(error.message);
-      throw error instanceof GuestError ? new Error(`${error.name}: ${error.message}`) : error;
+      throw error instanceof GuestError
+        ? new Error(`${error.name}: ${error.message}`)
+        : error;
     }
   }
 
@@ -208,7 +231,10 @@ export class SandboxedPlugin implements PluginInstance {
       try {
         await this.runHook("stop", this.limits.entryMs);
       } catch (error) {
-        this.ctx.log.warn({ err: describeError(error) }, "Plugin stop() failed");
+        this.ctx.log.warn(
+          { err: describeError(error) },
+          "Plugin stop() failed",
+        );
       }
     }
     this.teardown();
@@ -224,7 +250,10 @@ export class SandboxedPlugin implements PluginInstance {
     }
   }
 
-  private async runHook(name: "start" | "stop" | "onConfigUpdate", budgetMs: number) {
+  private async runHook(
+    name: "start" | "stop" | "onConfigUpdate",
+    budgetMs: number,
+  ) {
     const vm = this.vm;
     if (!vm) return;
     const result = vm.callBridge("hook", [name], budgetMs);
@@ -235,7 +264,12 @@ export class SandboxedPlugin implements PluginInstance {
     let handle: unknown;
     const timeout = new Promise<never>((_, reject) => {
       handle = clock.setTimeout(
-        () => reject(new Error(`${name}() did not finish within ${this.limits.hookTimeoutMs / 1000} s`)),
+        () =>
+          reject(
+            new Error(
+              `${name}() did not finish within ${this.limits.hookTimeoutMs / 1000} s`,
+            ),
+          ),
         this.limits.hookTimeoutMs,
       );
     });
@@ -262,16 +296,21 @@ export class SandboxedPlugin implements PluginInstance {
     this.ctx.log.warn({ reason }, "Turning off sandboxed plugin");
     this.teardown();
     // Not awaited: turning it off unloads it, which waits for the current load to finish
-    void this.ctx.disable(reason).catch((error) =>
-      this.ctx.log.error({ err: error }, "Failed to turn off plugin"),
-    );
+    void this.ctx
+      .disable(reason)
+      .catch((error) =>
+        this.ctx.log.error({ err: error }, "Failed to turn off plugin"),
+      );
   }
 
   private handleFailure(error: unknown, where: string): void {
     if (error instanceof SandboxFault) {
       this.fault(`${error.message} (${where})`);
     } else {
-      this.ctx.log.error({ err: describeError(error), where }, "Sandbox call failed");
+      this.ctx.log.error(
+        { err: describeError(error), where },
+        "Sandbox call failed",
+      );
     }
   }
 
@@ -281,7 +320,9 @@ export class SandboxedPlugin implements PluginInstance {
 
   private checkCpu(): void {
     if (this.overCpu) {
-      this.fault(`The plugin used more than ${this.limits.cpuPerMinuteMs / 1000} s of CPU in a minute`);
+      this.fault(
+        `The plugin used more than ${this.limits.cpuPerMinuteMs / 1000} s of CPU in a minute`,
+      );
     }
   }
 
@@ -302,15 +343,22 @@ export class SandboxedPlugin implements PluginInstance {
     try {
       json = JSON.stringify(args);
     } catch (error) {
-      this.ctx.log.error({ err: error, where }, "Event payload is not serializable");
+      this.ctx.log.error(
+        { err: error, where },
+        "Event payload is not serializable",
+      );
       return;
     }
-    this.enter(where, (vm) => vm.callBridge("dispatch", [handlerId, json], this.limits.entryMs));
+    this.enter(where, (vm) =>
+      vm.callBridge("dispatch", [handlerId, json], this.limits.entryMs),
+    );
   }
 
   private reject(kind: string): never {
     if (this.rejections.add() > this.limits.rejectionsPerMinute) {
-      queueMicrotask(() => this.fault(`The plugin kept going over the ${kind} rate limit`));
+      queueMicrotask(() =>
+        this.fault(`The plugin kept going over the ${kind} rate limit`),
+      );
     }
     throw new HostError("RateLimitError", `Too many ${kind} calls, slow down`);
   }
@@ -329,18 +377,25 @@ export class SandboxedPlugin implements PluginInstance {
       const schema = this.pkg.manifest.configSchema;
       if (schema) {
         const { data, issues } = coercePluginConfig(schema, raw);
-        if (issues.length > 0) this.ctx.log.warn({ issues }, "Stored config does not match the schema");
+        if (issues.length > 0)
+          this.ctx.log.warn(
+            { issues },
+            "Stored config does not match the schema",
+          );
         this.cachedConfig = data;
       } else {
         this.cachedConfig =
-          raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as PluginConfig) : {};
+          raw && typeof raw === "object" && !Array.isArray(raw)
+            ? (raw as PluginConfig)
+            : {};
       }
     }
     return structuredClone(this.cachedConfig);
   }
 
   private hostCall(method: string, argsJson: string): unknown {
-    if (argsJson.length > this.limits.maxArgBytes) throw invalid("The arguments are too large");
+    if (argsJson.length > this.limits.maxArgBytes)
+      throw invalid("The arguments are too large");
     const args = JSON.parse(argsJson) as unknown[];
     const fn = this.sync[method];
     if (!fn) throw new HostError("Error", `Unknown host call "${method}"`);
@@ -390,7 +445,10 @@ export class SandboxedPlugin implements PluginInstance {
 
   private addHandler(): void {
     if (++this.handlers > this.limits.maxHandlers) {
-      throw new HostError("LimitError", `At most ${this.limits.maxHandlers} handlers`);
+      throw new HostError(
+        "LimitError",
+        `At most ${this.limits.maxHandlers} handlers`,
+      );
     }
   }
 
@@ -413,7 +471,9 @@ export class SandboxedPlugin implements PluginInstance {
       action: answer.Answer.startsWith(this.prefix)
         ? answer.Answer.slice(this.prefix.length)
         : answer.Answer,
-      entries: Object.fromEntries((answer.Entries ?? []).map((e) => [e.Name, e.Value])),
+      entries: Object.fromEntries(
+        (answer.Entries ?? []).map((e) => [e.Name, e.Value]),
+      ),
     };
   }
 
@@ -427,18 +487,26 @@ export class SandboxedPlugin implements PluginInstance {
     }),
 
     log: (level: unknown, message: unknown, data: unknown) => {
-      const lvl = LOG_LEVELS.includes(level as never) ? (level as (typeof LOG_LEVELS)[number]) : "info";
+      const lvl = LOG_LEVELS.includes(level as never)
+        ? (level as (typeof LOG_LEVELS)[number])
+        : "info";
       const msg = String(message).slice(0, this.limits.maxLogBytes);
-      const extra = data !== null && jsonSize(data) <= this.limits.maxLogBytes ? { data } : {};
+      const extra =
+        data !== null && jsonSize(data) <= this.limits.maxLogBytes
+          ? { data }
+          : {};
       this.ctx.log[lvl]({ ...extra, source: "plugin" }, msg);
     },
 
     error: (where: unknown, error: unknown) => {
       const count = this.errors.add();
-      if (count <= 20) this.ctx.log.warn({ where, err: error }, "Plugin code threw");
+      if (count <= 20)
+        this.ctx.log.warn({ where, err: error }, "Plugin code threw");
       if (count > this.limits.errorsPerMinute) {
         queueMicrotask(() =>
-          this.fault(`The plugin kept failing (${String(where)}: ${String((error as any)?.message)})`),
+          this.fault(
+            `The plugin kept failing (${String(where)}: ${String((error as any)?.message)})`,
+          ),
         );
       }
     },
@@ -455,7 +523,8 @@ export class SandboxedPlugin implements PluginInstance {
         );
         return;
       }
-      const custom = typeof event === "string" ? parseCustomEventKey(event) : null;
+      const custom =
+        typeof event === "string" ? parseCustomEventKey(event) : null;
       if (!custom) throw invalid(`Unknown event "${String(event)}"`);
       this.addHandler();
       this.ctx.on("pluginEvent", (emitted) => {
@@ -471,15 +540,22 @@ export class SandboxedPlugin implements PluginInstance {
         throw invalid("Event names use 1-64 letters, digits, - _ and .");
       }
       if (jsonSize(payload) > MAX_CUSTOM_EVENT_BYTES) {
-        throw invalid(`Event payloads may be at most ${MAX_CUSTOM_EVENT_BYTES / 1024} KB`);
+        throw invalid(
+          `Event payloads may be at most ${MAX_CUSTOM_EVENT_BYTES / 1024} KB`,
+        );
       }
       this.limit("events");
       this.ctx.emit(name, payload);
     },
 
     command: (name: unknown, id: unknown) => {
-      if (typeof name !== "string" || !this.pkg.manifest.commands.includes(name)) {
-        throw invalid(`/${String(name)} is not one of the commands in the manifest`);
+      if (
+        typeof name !== "string" ||
+        !this.pkg.manifest.commands.includes(name)
+      ) {
+        throw invalid(
+          `/${String(name)} is not one of the commands in the manifest`,
+        );
       }
       this.addHandler();
       const handlerId = Number(id);
@@ -494,8 +570,14 @@ export class SandboxedPlugin implements PluginInstance {
       }
       this.addHandler();
       const handlerId = Number(id);
-      const remove = this.ctx.action(`${this.prefix}${name}`, (answer, params) =>
-        this.dispatch(handlerId, [this.toAnswer(answer), params], `action ${name}`),
+      const remove = this.ctx.action(
+        `${this.prefix}${name}`,
+        (answer, params) =>
+          this.dispatch(
+            handlerId,
+            [this.toAnswer(answer), params],
+            `action ${name}`,
+          ),
       );
       this.actions.set(handlerId, remove);
     },
@@ -511,7 +593,10 @@ export class SandboxedPlugin implements PluginInstance {
         throw invalid("Timer delays must be between 0 and 24 hours");
       }
       if (this.timers.size >= this.limits.maxTimers) {
-        throw new HostError("LimitError", `At most ${this.limits.maxTimers} timers`);
+        throw new HostError(
+          "LimitError",
+          `At most ${this.limits.maxTimers} timers`,
+        );
       }
       const handlerId = Number(id);
       const interval = repeat === true;
@@ -523,7 +608,9 @@ export class SandboxedPlugin implements PluginInstance {
         const handle = clock.setTimeout(() => {
           if (interval) arm();
           else this.timers.delete(handlerId);
-          this.enter("timer", (vm) => vm.callBridge("timer", [handlerId, interval], this.limits.entryMs));
+          this.enter("timer", (vm) =>
+            vm.callBridge("timer", [handlerId, interval], this.limits.entryMs),
+          );
         }, wait);
         this.timers.set(handlerId, () => clock.clearTimeout(handle));
       };
@@ -536,7 +623,8 @@ export class SandboxedPlugin implements PluginInstance {
     },
 
     live: (field: unknown) => {
-      if (!LIVE_FIELDS.includes(field as never)) throw invalid(`Unknown live field "${String(field)}"`);
+      if (!LIVE_FIELDS.includes(field as never))
+        throw invalid(`Unknown live field "${String(field)}"`);
       return this.ctx.live[field as (typeof LIVE_FIELDS)[number]];
     },
 
@@ -557,22 +645,30 @@ export class SandboxedPlugin implements PluginInstance {
     "ui.create": (kind: unknown, options: any) => {
       this.require("ui");
       if (this.pages.size >= this.limits.maxPages) {
-        throw new HostError("LimitError", `At most ${this.limits.maxPages} widgets and windows`);
+        throw new HostError(
+          "LimitError",
+          `At most ${this.limits.maxPages} widgets and windows`,
+        );
       }
       const id = options?.id;
       if (typeof id !== "string" || !PAGE_ID.test(id)) {
         throw invalid("Widget ids use 1-64 letters, digits, - and _");
       }
-      const login = options.login === null || options.login === undefined
-        ? undefined
-        : text(options.login, "login", 100);
-      if (kind === "window" && !login) throw invalid("A window needs the login of its player");
+      const login =
+        options.login === null || options.login === undefined
+          ? undefined
+          : text(options.login, "login", 100);
+      if (kind === "window" && !login)
+        throw invalid("A window needs the login of its player");
 
       const page: Page = {
         id: `plg.${this.pkg.manifest.slug}.${id}`,
         login,
         withUpdate: options.withUpdate !== false,
-        closeHandler: typeof options.closeHandler === "number" ? options.closeHandler : null,
+        closeHandler:
+          typeof options.closeHandler === "number"
+            ? options.closeHandler
+            : null,
       };
       const handle = this.nextPage++;
       this.pages.set(handle, page);
@@ -585,8 +681,10 @@ export class SandboxedPlugin implements PluginInstance {
           for (const [, open] of this.pages) {
             if (open.id !== page.id || open.login !== answer.Login) continue;
             this.ctx.ui.page.destroy(open.id, open.login);
-            if (open.withUpdate) this.ctx.ui.page.destroy(`${open.id}-update`, open.login);
-            if (open.closeHandler !== null) this.dispatch(open.closeHandler, [], "window close");
+            if (open.withUpdate)
+              this.ctx.ui.page.destroy(`${open.id}-update`, open.login);
+            if (open.closeHandler !== null)
+              this.dispatch(open.closeHandler, [], "window close");
           }
         });
       }
@@ -598,7 +696,8 @@ export class SandboxedPlugin implements PluginInstance {
       this.limit("ui");
       const page = this.page(handle);
       this.showPage(page, "main", xml);
-      if (page.withUpdate && updateXml !== null) this.showPage(page, "update", updateXml);
+      if (page.withUpdate && updateXml !== null)
+        this.showPage(page, "update", updateXml);
     },
 
     "ui.update": (handle: unknown, updateXml: unknown) => {
@@ -612,213 +711,285 @@ export class SandboxedPlugin implements PluginInstance {
       this.require("ui");
       const page = this.page(handle);
       this.ctx.ui.page.hide(page.id, page.login);
-      if (page.withUpdate) this.ctx.ui.page.hide(`${page.id}-update`, page.login);
+      if (page.withUpdate)
+        this.ctx.ui.page.hide(`${page.id}-update`, page.login);
     },
 
     "ui.destroy": (handle: unknown) => {
       this.require("ui");
       const page = this.page(handle);
       this.ctx.ui.page.destroy(page.id, page.login);
-      if (page.withUpdate) this.ctx.ui.page.destroy(`${page.id}-update`, page.login);
+      if (page.withUpdate)
+        this.ctx.ui.page.destroy(`${page.id}-update`, page.login);
     },
 
     "ui.addButton": (button: any) => {
       this.require("ui");
       this.limit("ui");
       const name = text(button?.name, "name", 40);
-      const action = button?.action === undefined ? undefined : text(button.action, "action", 100);
+      const action =
+        button?.action === undefined
+          ? undefined
+          : text(button.action, "action", 100);
       this.buttons.add(name);
       this.ctx.ui.addAction({
         name: `${this.prefix}${name}`,
         icon: text(button?.icon, "icon", 200),
         type: button?.type === "image" ? "image" : "text",
         action: action === undefined ? undefined : `${this.prefix}${action}`,
+        adminOnly: button?.adminOnly === true,
       });
     },
 
     "ui.removeButton": (name: unknown) => {
       this.require("ui");
       const key = text(name, "name", 40);
-      if (this.buttons.delete(key)) this.ctx.ui.removeAction(`${this.prefix}${key}`);
+      if (this.buttons.delete(key))
+        this.ctx.ui.removeAction(`${this.prefix}${key}`);
     },
   };
 
-  private readonly async: Record<string, (...args: any[]) => Promise<unknown>> = {
-    "config.save": async (config: unknown) => {
-      const schema = this.pkg.manifest.configSchema;
-      let data: PluginConfig;
-      if (schema) {
-        const result = validatePluginConfig(schema, config);
-        if (!result.success) {
-          throw invalid(result.issues.map((i) => `${i.path}: ${i.message}`).join("; "));
+  private readonly async: Record<string, (...args: any[]) => Promise<unknown>> =
+    {
+      "config.save": async (config: unknown) => {
+        const schema = this.pkg.manifest.configSchema;
+        let data: PluginConfig;
+        if (schema) {
+          const result = validatePluginConfig(schema, config);
+          if (!result.success) {
+            throw invalid(
+              result.issues.map((i) => `${i.path}: ${i.message}`).join("; "),
+            );
+          }
+          data = result.data;
+        } else {
+          if (!config || typeof config !== "object" || Array.isArray(config)) {
+            throw invalid("The config must be an object");
+          }
+          if (jsonSize(config) > 64 * 1024)
+            throw invalid("The config may be at most 64 KB");
+          data = config as PluginConfig;
         }
-        data = result.data;
-      } else {
-        if (!config || typeof config !== "object" || Array.isArray(config)) {
-          throw invalid("The config must be an object");
+        await this.ctx.saveConfig(data);
+        this.cachedConfig = null;
+      },
+
+      sleep: async (ms: unknown) => {
+        const delay = Number(ms);
+        if (!Number.isFinite(delay) || delay < 0 || delay > 86_400_000) {
+          throw invalid("sleep() takes 0 to 24 hours");
         }
-        if (jsonSize(config) > 64 * 1024) throw invalid("The config may be at most 64 KB");
-        data = config as PluginConfig;
-      }
-      await this.ctx.saveConfig(data);
-      this.cachedConfig = null;
-    },
+        await this.ctx.sleep(delay);
+      },
 
-    sleep: async (ms: unknown) => {
-      const delay = Number(ms);
-      if (!Number.isFinite(delay) || delay < 0 || delay > 86_400_000) {
-        throw invalid("sleep() takes 0 to 24 hours");
-      }
-      await this.ctx.sleep(delay);
-    },
+      "players.get": async (login: unknown) =>
+        this.ctx.players.get(text(login, "login", 100)),
+      "players.isAdmin": async (login: unknown) =>
+        this.ctx.players.isAdmin(text(login, "login", 100)),
 
-    "players.get": async (login: unknown) => this.ctx.players.get(text(login, "login", 100)),
+      "chat.send": async (message: unknown) => {
+        this.require("chat:send");
+        this.limit("chat");
+        await this.ctx.chat.send(text(message, "message", 1000));
+      },
 
-    "chat.send": async (message: unknown) => {
-      this.require("chat:send");
-      this.limit("chat");
-      await this.ctx.chat.send(text(message, "message", 1000));
-    },
+      "chat.sendTo": async (login: unknown, message: unknown) => {
+        this.require("chat:send");
+        this.limit("chat");
+        await this.ctx.chat.sendTo(
+          text(login, "login", 100),
+          text(message, "message", 1000),
+        );
+      },
 
-    "chat.sendTo": async (login: unknown, message: unknown) => {
-      this.require("chat:send");
-      this.limit("chat");
-      await this.ctx.chat.sendTo(text(login, "login", 100), text(message, "message", 1000));
-    },
+      "storage.get": async (key: unknown) => {
+        this.require("storage");
+        return (
+          (await this.deps.storage.get(
+            this.ctx.serverId,
+            this.pluginRowId,
+            this.storageKey(key),
+          )) ?? null
+        );
+      },
 
-    "storage.get": async (key: unknown) => {
-      this.require("storage");
-      return (await this.deps.storage.get(this.ctx.serverId, this.pluginRowId, this.storageKey(key))) ?? null;
-    },
+      "storage.set": async (key: unknown, value: unknown) => {
+        this.require("storage");
+        this.limit("storageWrite");
+        const storageKey = this.storageKey(key);
+        const size = jsonSize(value);
+        const { storage } = this.limits;
+        if (size > storage.maxValueBytes) {
+          throw new HostError(
+            "LimitError",
+            `A value may be at most ${storage.maxValueBytes / 1024} KB`,
+          );
+        }
+        const { serverId } = this.ctx;
+        const pluginId = this.pluginRowId;
+        const [usage, previous] = await Promise.all([
+          this.deps.storage.usage(serverId, pluginId),
+          this.deps.storage.sizeOf(serverId, pluginId, storageKey),
+        ]);
+        if (previous === 0 && usage.keys >= storage.maxKeys) {
+          throw new HostError("LimitError", `At most ${storage.maxKeys} keys`);
+        }
+        if (usage.bytes - previous + size > storage.maxBytes) {
+          throw new HostError(
+            "LimitError",
+            `Storage is limited to ${storage.maxBytes / 1024} KB`,
+          );
+        }
+        await this.deps.storage.set(
+          serverId,
+          pluginId,
+          storageKey,
+          value ?? null,
+          size,
+        );
+      },
 
-    "storage.set": async (key: unknown, value: unknown) => {
-      this.require("storage");
-      this.limit("storageWrite");
-      const storageKey = this.storageKey(key);
-      const size = jsonSize(value);
-      const { storage } = this.limits;
-      if (size > storage.maxValueBytes) {
-        throw new HostError("LimitError", `A value may be at most ${storage.maxValueBytes / 1024} KB`);
-      }
-      const { serverId } = this.ctx;
-      const pluginId = this.pluginRowId;
-      const [usage, previous] = await Promise.all([
-        this.deps.storage.usage(serverId, pluginId),
-        this.deps.storage.sizeOf(serverId, pluginId, storageKey),
-      ]);
-      if (previous === 0 && usage.keys >= storage.maxKeys) {
-        throw new HostError("LimitError", `At most ${storage.maxKeys} keys`);
-      }
-      if (usage.bytes - previous + size > storage.maxBytes) {
-        throw new HostError("LimitError", `Storage is limited to ${storage.maxBytes / 1024} KB`);
-      }
-      await this.deps.storage.set(serverId, pluginId, storageKey, value ?? null, size);
-    },
+      "storage.delete": async (key: unknown) => {
+        this.require("storage");
+        this.limit("storageWrite");
+        await this.deps.storage.delete(
+          this.ctx.serverId,
+          this.pluginRowId,
+          this.storageKey(key),
+        );
+      },
 
-    "storage.delete": async (key: unknown) => {
-      this.require("storage");
-      this.limit("storageWrite");
-      await this.deps.storage.delete(this.ctx.serverId, this.pluginRowId, this.storageKey(key));
-    },
+      "storage.keys": async (prefix: unknown) => {
+        this.require("storage");
+        const value =
+          typeof prefix === "string"
+            ? prefix.slice(0, this.limits.storage.maxKeyLength)
+            : "";
+        return this.deps.storage.keys(
+          this.ctx.serverId,
+          this.pluginRowId,
+          value,
+          this.limits.storage.maxKeys,
+        );
+      },
 
-    "storage.keys": async (prefix: unknown) => {
-      this.require("storage");
-      const value = typeof prefix === "string" ? prefix.slice(0, this.limits.storage.maxKeyLength) : "";
-      return this.deps.storage.keys(this.ctx.serverId, this.pluginRowId, value, this.limits.storage.maxKeys);
-    },
+      "records.local": async (mapUid: unknown) => {
+        this.require("records:read");
+        return this.ctx.records.local(text(mapUid, "mapUid", 100));
+      },
 
-    "records.local": async (mapUid: unknown) => {
-      this.require("records:read");
-      return this.ctx.records.local(text(mapUid, "mapUid", 100));
-    },
+      "records.forPlayers": async (mapUid: unknown, logins: unknown) => {
+        this.require("records:read");
+        return this.ctx.records.forPlayers(
+          text(mapUid, "mapUid", 100),
+          textList(logins, "logins", 500),
+        );
+      },
 
-    "records.forPlayers": async (mapUid: unknown, logins: unknown) => {
-      this.require("records:read");
-      return this.ctx.records.forPlayers(text(mapUid, "mapUid", 100), textList(logins, "logins", 500));
-    },
+      "maps.findByUid": async (uid: unknown) => {
+        this.require("maps:read");
+        const map = await this.ctx.maps.findByUid(text(uid, "uid", 100));
+        return map ? publicMap(map) : null;
+      },
 
-    "maps.findByUid": async (uid: unknown) => {
-      this.require("maps:read");
-      const map = await this.ctx.maps.findByUid(text(uid, "uid", 100));
-      return map ? publicMap(map) : null;
-    },
+      "maps.findByFileNames": async (fileNames: unknown) => {
+        this.require("maps:read");
+        const maps = await this.ctx.maps.findByFileNames(
+          textList(fileNames, "fileNames", 500),
+        );
+        return maps.map(publicMap);
+      },
 
-    "maps.findByFileNames": async (fileNames: unknown) => {
-      this.require("maps:read");
-      const maps = await this.ctx.maps.findByFileNames(textList(fileNames, "fileNames", 500));
-      return maps.map(publicMap);
-    },
+      "nadeo.worldRecord": async (mapUid: unknown) => {
+        this.require("nadeo:read");
+        this.limit("nadeo");
+        return this.ctx.nadeo.getWorldRecord(text(mapUid, "mapUid", 100));
+      },
 
-    "nadeo.worldRecord": async (mapUid: unknown) => {
-      this.require("nadeo:read");
-      this.limit("nadeo");
-      return this.ctx.nadeo.getWorldRecord(text(mapUid, "mapUid", 100));
-    },
+      "nadeo.personalBests": async (mapUid: unknown, accountIds: unknown) => {
+        this.require("nadeo:read");
+        this.limit("nadeo");
+        const bests = await this.ctx.nadeo.getPersonalBests(
+          text(mapUid, "mapUid", 100),
+          textList(accountIds, "accountIds", 100),
+        );
+        return Object.fromEntries(bests);
+      },
 
-    "nadeo.personalBests": async (mapUid: unknown, accountIds: unknown) => {
-      this.require("nadeo:read");
-      this.limit("nadeo");
-      const bests = await this.ctx.nadeo.getPersonalBests(
-        text(mapUid, "mapUid", 100),
-        textList(accountIds, "accountIds", 100),
-      );
-      return Object.fromEntries(bests);
-    },
+      "nadeo.accountNames": async (accountIds: unknown) => {
+        this.require("nadeo:read");
+        this.limit("nadeo");
+        return this.ctx.nadeo.getAccountNames(
+          textList(accountIds, "accountIds", 100),
+        );
+      },
 
-    "nadeo.accountNames": async (accountIds: unknown) => {
-      this.require("nadeo:read");
-      this.limit("nadeo");
-      return this.ctx.nadeo.getAccountNames(textList(accountIds, "accountIds", 100));
-    },
+      notifyAdmins: async (message: unknown, description: unknown) => {
+        this.require("notifications");
+        this.limit("notify");
+        await this.ctx.notifyAdmins(
+          text(message, "message", 300),
+          description === null || description === undefined
+            ? undefined
+            : text(description, "description", 1000),
+        );
+      },
 
-    notifyAdmins: async (message: unknown, description: unknown) => {
-      this.require("notifications");
-      this.limit("notify");
-      await this.ctx.notifyAdmins(
-        text(message, "message", 300),
-        description === null || description === undefined ? undefined : text(description, "description", 1000),
-      );
-    },
+      "server.setPaused": async (paused: unknown) => {
+        this.require("mode:control");
+        if (typeof paused !== "boolean")
+          throw invalid("paused must be true or false");
+        await this.ctx.server.setPaused(paused);
+      },
 
-    "server.setPaused": async (paused: unknown) => {
-      this.require("mode:control");
-      if (typeof paused !== "boolean") throw invalid("paused must be true or false");
-      await this.ctx.server.setPaused(paused);
-    },
+      "server.setScriptName": async (script: unknown) => {
+        this.require("mode:control");
+        await this.ctx.server.setScriptName(text(script, "script", 200));
+      },
 
-    "server.setScriptName": async (script: unknown) => {
-      this.require("mode:control");
-      await this.ctx.server.setScriptName(text(script, "script", 200));
-    },
+      "gbx.call": async (method: unknown, params: unknown) => {
+        this.limit("gbx");
+        const name = text(method, "method", 100);
+        if (!this.gbxMethods.has(name)) {
+          throw new HostError(
+            "CapabilityError",
+            `The plugin may not call ${name}`,
+          );
+        }
+        if (!Array.isArray(params) || params.length > 100)
+          throw invalid("Too many parameters");
+        return this.ctx.gbx.call(name, ...params);
+      },
 
-    "gbx.call": async (method: unknown, params: unknown) => {
-      this.limit("gbx");
-      const name = text(method, "method", 100);
-      if (!this.gbxMethods.has(name)) {
-        throw new HostError("CapabilityError", `The plugin may not call ${name}`);
-      }
-      if (!Array.isArray(params) || params.length > 100) throw invalid("Too many parameters");
-      return this.ctx.gbx.call(name, ...params);
-    },
+      "gbx.callScript": async (method: unknown, params: unknown) => {
+        this.limit("gbx");
+        const name = text(method, "method", 100);
+        if (!isScriptCallAllowed(name, [...this.capabilities])) {
+          throw new HostError(
+            "CapabilityError",
+            `${name} needs the "mode:control" capability`,
+          );
+        }
+        return this.ctx.gbx.callScript(
+          name,
+          ...textList(params ?? [], "params", 50),
+        );
+      },
 
-    "gbx.callScript": async (method: unknown, params: unknown) => {
-      this.limit("gbx");
-      const name = text(method, "method", 100);
-      if (!isScriptCallAllowed(name, [...this.capabilities])) {
-        throw new HostError("CapabilityError", `${name} needs the "mode:control" capability`);
-      }
-      return this.ctx.gbx.callScript(name, ...textList(params ?? [], "params", 50));
-    },
-
-    "http.fetch": async (url: unknown, request: any) => {
-      this.limit("http");
-      return this.deps.http.fetch(this.httpRequest(url, request ?? {}));
-    },
-  };
+      "http.fetch": async (url: unknown, request: any) => {
+        this.limit("http");
+        return this.deps.http.fetch(this.httpRequest(url, request ?? {}));
+      },
+    };
 
   private storageKey(key: unknown): string {
     const max = this.limits.storage.maxKeyLength;
-    if (typeof key !== "string" || key.length === 0 || key.length > max || !STORAGE_KEY.test(key)) {
+    if (
+      typeof key !== "string" ||
+      key.length === 0 ||
+      key.length > max ||
+      !STORAGE_KEY.test(key)
+    ) {
       throw invalid(`Keys are 1-${max} printable characters without spaces`);
     }
     return key;
@@ -832,33 +1003,53 @@ export class SandboxedPlugin implements PluginInstance {
       if (error instanceof HostError) throw error;
       throw invalid("Invalid URL");
     }
-    if (url.protocol !== "https:") throw invalid("Only https:// URLs are allowed");
-    if (url.username || url.password) throw invalid("URLs may not contain credentials");
-    if (url.port && url.port !== "443") throw invalid("Only the default HTTPS port is allowed");
+    if (url.protocol !== "https:")
+      throw invalid("Only https:// URLs are allowed");
+    if (url.username || url.password)
+      throw invalid("URLs may not contain credentials");
+    if (url.port && url.port !== "443")
+      throw invalid("Only the default HTTPS port is allowed");
     if (!isHostAllowed(url.hostname, [...this.capabilities])) {
-      throw new HostError("CapabilityError", `The plugin did not declare "http:${url.hostname}"`);
+      throw new HostError(
+        "CapabilityError",
+        `The plugin did not declare "http:${url.hostname}"`,
+      );
     }
 
     const method = String(request.method ?? "GET").toUpperCase();
-    if (!HTTP_METHODS.includes(method)) throw invalid(`Unsupported method ${method}`);
+    if (!HTTP_METHODS.includes(method))
+      throw invalid(`Unsupported method ${method}`);
 
     const headers: Record<string, string> = {};
     const rawHeaders = request.headers ?? {};
-    if (typeof rawHeaders !== "object" || Array.isArray(rawHeaders)) throw invalid("headers must be an object");
+    if (typeof rawHeaders !== "object" || Array.isArray(rawHeaders))
+      throw invalid("headers must be an object");
     const entries = Object.entries(rawHeaders);
     if (entries.length > 30) throw invalid("At most 30 headers");
     for (const [name, value] of entries) {
       const key = name.toLowerCase();
-      if (!/^[a-z0-9!#$%&'*+.^_`|~-]{1,100}$/.test(key) || BLOCKED_HEADERS.has(key) || key.startsWith("proxy-")) {
+      if (
+        !/^[a-z0-9!#$%&'*+.^_`|~-]{1,100}$/.test(key) ||
+        BLOCKED_HEADERS.has(key) ||
+        key.startsWith("proxy-")
+      ) {
         throw invalid(`Header ${name} is not allowed`);
       }
       headers[key] = text(value, `header ${name}`, 4000);
     }
 
-    const body = request.body === undefined || request.body === null ? undefined : String(request.body);
+    const body =
+      request.body === undefined || request.body === null
+        ? undefined
+        : String(request.body);
     const { http } = this.limits;
-    if (body !== undefined && Buffer.byteLength(body, "utf8") > http.maxRequestBytes) {
-      throw invalid(`Request bodies may be at most ${http.maxRequestBytes / 1024} KB`);
+    if (
+      body !== undefined &&
+      Buffer.byteLength(body, "utf8") > http.maxRequestBytes
+    ) {
+      throw invalid(
+        `Request bodies may be at most ${http.maxRequestBytes / 1024} KB`,
+      );
     }
     const timeout = Number(request.timeoutMs ?? http.timeoutMs);
 
@@ -867,7 +1058,9 @@ export class SandboxedPlugin implements PluginInstance {
       method,
       headers,
       body,
-      timeoutMs: Number.isFinite(timeout) ? Math.min(Math.max(timeout, 1000), http.maxTimeoutMs) : http.timeoutMs,
+      timeoutMs: Number.isFinite(timeout)
+        ? Math.min(Math.max(timeout, 1000), http.maxTimeoutMs)
+        : http.timeoutMs,
       maxResponseBytes: http.maxResponseBytes,
     };
   }

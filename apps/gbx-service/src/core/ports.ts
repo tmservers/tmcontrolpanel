@@ -248,6 +248,16 @@ export interface Clock {
   sleep(ms: number): Promise<void>;
 }
 
+// Sends exceptions to the operator's error tracker (Sentry); does nothing when none is set up
+export interface ErrorReporter {
+  captureException(
+    error: unknown,
+    context: { tags: Record<string, string>; extra?: Record<string, unknown> },
+  ): void;
+}
+
+export const noopErrorReporter: ErrorReporter = { captureException() {} };
+
 export const systemClock: Clock = {
   now: () => Date.now(),
   setTimeout: (fn, ms) => setTimeout(fn, ms),

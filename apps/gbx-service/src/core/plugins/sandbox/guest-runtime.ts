@@ -268,6 +268,13 @@ export function guestRuntime(global: any): void {
     emit(name: string, payload?: unknown) {
       call("emit", name, payload === undefined ? null : payload);
     },
+    captureException(error: unknown, extra?: Record<string, unknown>) {
+      call(
+        "captureException",
+        describe(error),
+        extra === undefined ? null : extra,
+      );
+    },
     command(name: string, fn: (...args: any[]) => unknown) {
       call("command", name, handler(`command /${name}`, fn));
     },

@@ -58,6 +58,10 @@ export type PluginEventName = keyof PluginEvents;
 // Another plugin's event: "<slug>:<name>", or "<slug>:*" for all of them
 export type CustomEventKey = `${string}:${string}`;
 
+// A raw dedicated server callback: "gbx:ManiaPlanet.PlayerCheckpoint" (XML-RPC, params array as
+// payload), "gbx:Trackmania.Event.WayPoint" (mode script, parsed JSON as payload) or "gbx:*"
+export type GbxEventKey = `gbx:${string}`;
+
 export interface CustomEventSource {
   // Slug of the plugin that emitted it
   plugin: string;
@@ -192,10 +196,18 @@ export interface PluginContext<Config = Record<string, unknown>> {
     event: K,
     handler: (...args: PluginEvents[K]) => unknown,
   ): void;
+  // Manialink answers and tunnel data are never delivered; use ctx.action() for your own pages
+  on<T = unknown>(
+    event: GbxEventKey,
+    handler: (payload: T, name: string) => unknown,
+  ): void;
   on<T = unknown>(
     event: CustomEventKey,
     handler: (payload: T, source: CustomEventSource) => unknown,
   ): void;
+  // Reports to the panel operator's Sentry with your slug, version and the server as tags.
+  // A no-op without Sentry; at most 10 reports a minute, extra is capped at 4 KB of JSON.
+  captureException(error: unknown, extra?: Record<string, unknown>): void;
   // Sends "<your slug>:<name>" to every listener on this server, after the current call returns.
   // The payload is copied as JSON, at most 64 KB.
   emit(name: string, payload?: unknown): void;

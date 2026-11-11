@@ -439,6 +439,116 @@ describe("sandboxed plugins", () => {
     expect(stored(h, "ok")).toBe("ok");
   });
 
+  it("delivers named GBX and mode script callbacks, and protects private callbacks", async () => {
+    const h = await createHarness({
+      packages: [
+        {
+          bytes: testPackage(`
+          ctx.on("gbx:ManiaPlanet.PlayerCheckpoint", (payload, name) => ctx.storage.set("checkpoint", { payload, name }));
+          ctx.on("gbx:Trackmania.Event.WayPoint", (payload, name) => ctx.storage.set("waypoint", { payload, name }));
+          ctx.on("gbx:*", (payload, name) => ctx.storage.set("all:" + name, payload));
+          return {};`),
+        },
+      ],
+    });
+
+    await h.callback("ManiaPlanet.PlayerCheckpoint", ["p1", 3]);
+    await h.script("Trackmania.Event.WayPoint", {
+      login: "p1",
+      racetime: 1234,
+    });
+    await h.callback("ManiaPlanet.PlayerManialinkPageAnswer", [
+      1,
+      "p1",
+      "secret",
+      [],
+    ]);
+    await h.callback("ManiaPlanet.TunnelDataReceived", ["p1", "secret"]);
+
+    expect(stored(h, "checkpoint")).toEqual({
+      payload: ["p1", 3],
+      name: "ManiaPlanet.PlayerCheckpoint",
+    });
+    expect(stored(h, "waypoint")).toEqual({
+      payload: { login: "p1", racetime: 1234 },
+      name: "Trackmania.Event.WayPoint",
+    });
+    expect(stored(h, "all:ManiaPlanet.PlayerCheckpoint")).toEqual(["p1", 3]);
+    expect(stored(h, "all:Trackmania.Event.WayPoint")).toEqual({
+      login: "p1",
+      racetime: 1234,
+    });
+    expect(
+      stored(h, "all:ManiaPlanet.PlayerManialinkPageAnswer"),
+    ).toBeUndefined();
+    expect(stored(h, "all:ManiaPlanet.TunnelDataReceived")).toBeUndefined();
+  });
+
+  it("reports guest exceptions with plugin context and bounded extra", async () => {
+    const reports: {
+      error: unknown;
+      context: {
+        tags: Record<string, string>;
+        extra?: Record<string, unknown>;
+      };
+    }[] = [];
+    const h = await createHarness({
+      errors: {
+        captureException: (error, context) => reports.push({ error, context }),
+      },
+      packages: [
+        {
+          bytes: testPackage(
+            `
+          const guestError = new Error("broken"); guestError.name = "GuestError";
+          ctx.captureException(guestError, { key: "value" });
+          ctx.captureException(new Error("ignored"), { value: "x".repeat(5000) });
+          return {};`,
+            { version: "2.3.4" },
+          ),
+        },
+      ],
+    });
+
+    expect(reports).toHaveLength(2);
+    expect(reports[0]).toMatchObject({
+      error: expect.objectContaining({
+        name: "GuestError",
+        message: "broken",
+        stack: expect.stringMatching(/^GuestError: broken\n/),
+      }),
+      context: {
+        tags: {
+          source: "plugin",
+          pluginVersion: "2.3.4",
+          plugin: "test-plugin",
+          serverId: SERVER_ID,
+        },
+        extra: { key: "value" },
+      },
+    });
+    expect(reports[1]?.context.extra).toBeUndefined();
+    expect(record(h, "test-plugin").enabled).toBe(true);
+  });
+
+  it("drops captureException reports after the burst without disabling the plugin", async () => {
+    const reports: unknown[] = [];
+    const h = await createHarness({
+      errors: { captureException: (error) => reports.push(error) },
+      packages: [
+        {
+          bytes: testPackage(`
+          for (let i = 0; i < 15; i++) ctx.captureException({ message: "report " + i });
+          return {};`),
+        },
+      ],
+    });
+
+    expect(reports).toHaveLength(10);
+    expect(record(h, "test-plugin").enabled).toBe(true);
+    expect(h.runtime.plugins.loadedIds()).toContain("test-plugin");
+  });
+
   it("runs timers on the service clock and stops them on unload", async () => {
     const h = await createHarness({
       packages: [

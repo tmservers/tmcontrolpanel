@@ -1,6 +1,7 @@
 import type {
   Elimination,
   EndMap,
+  GbxCallback,
   PauseStatus,
   PlayerChat,
   PlayerManialinkPageAnswer,
@@ -91,6 +92,24 @@ function parseScriptCallback(data: unknown): GameEvent | null {
     default:
       return null;
   }
+}
+
+// Any callback in the shape plugins get; mode script JSON that fails to parse stays as text
+export function toGbxCallback(method: string, data: unknown): GbxCallback {
+  const args = Array.isArray(data) ? data : [];
+  const scripted =
+    method === "ManiaPlanet.ModeScriptCallbackArray" ||
+    method === "ManiaPlanet.ModeScriptCallback";
+  if (!scripted || typeof args[0] !== "string") {
+    return { name: method, payload: args };
+  }
+  let payload: unknown;
+  try {
+    payload = parseScriptPayload(args[1]);
+  } catch {
+    payload = Array.isArray(args[1]) ? args[1][0] : args[1];
+  }
+  return { name: args[0], payload };
 }
 
 // Returns null for callbacks we don't handle; throws only on malformed JSON payloads

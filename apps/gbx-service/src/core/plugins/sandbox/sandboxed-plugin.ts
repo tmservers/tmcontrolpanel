@@ -3,9 +3,11 @@ import {
   CUSTOM_EVENT_NAME,
   isHostAllowed,
   isPluginEvent,
+  isPrivateGbxCallback,
   matchesCustomEvent,
   MAX_CUSTOM_EVENT_BYTES,
   parseCustomEventKey,
+  parseGbxEventKey,
   validatePluginConfig,
   type PlayerManialinkPageAnswer,
   type PluginConfig,
@@ -511,6 +513,31 @@ export class SandboxedPlugin implements PluginInstance {
       }
     },
 
+    captureException: (error: unknown, extra: unknown) => {
+      // Dropped over the limit; a reporting loop must not take the plugin down
+      if (!this.buckets.errorReports.take()) return;
+      const info = (error ?? {}) as Record<string, unknown>;
+      const reported = new Error(
+        String(info.message ?? "Unknown error").slice(0, 1024),
+      );
+      reported.name = String(info.name ?? "Error").slice(0, 100);
+      // QuickJS stacks hold only the frames, so add the usual first line
+      if (typeof info.stack === "string") {
+        reported.stack = `${reported.name}: ${reported.message}\n${info.stack.slice(0, 8192)}`;
+      }
+      const extras =
+        extra !== null &&
+        typeof extra === "object" &&
+        !Array.isArray(extra) &&
+        jsonSize(extra) <= this.limits.maxLogBytes
+          ? (extra as Record<string, unknown>)
+          : undefined;
+      this.ctx.captureException(reported, extras, {
+        source: "plugin",
+        pluginVersion: this.pkg.manifest.version,
+      });
+    },
+
     "config.get": () => this.config(),
     serverName: () => this.ctx.serverName(),
 
@@ -521,6 +548,18 @@ export class SandboxedPlugin implements PluginInstance {
         this.ctx.on(event, (...args: unknown[]) =>
           this.dispatch(handlerId, args, `event ${event}`),
         );
+        return;
+      }
+      // Before custom keys, which "gbx:<name>" would also match
+      const callback =
+        typeof event === "string" ? parseGbxEventKey(event) : null;
+      if (callback) {
+        this.addHandler();
+        this.ctx.on("gbxCallback", ({ name, payload }) => {
+          if (isPrivateGbxCallback(name)) return;
+          if (callback !== "*" && callback !== name) return;
+          this.dispatch(handlerId, [payload, name], `event ${event}`);
+        });
         return;
       }
       const custom =

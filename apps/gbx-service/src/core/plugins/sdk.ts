@@ -93,6 +93,12 @@ export interface PluginContext<Config = unknown> {
     local(mapUid: string): Promise<LocalRecord | null>;
     forPlayers(mapUid: string, logins: string[]): Promise<LocalRecord[]>;
   };
+  // Reports to the operator's Sentry, tagged with the plugin and server
+  captureException(
+    error: unknown,
+    extra?: Record<string, unknown>,
+    tags?: Record<string, string>,
+  ): void;
   notifyAdmins(
     message: string,
     description?: string,

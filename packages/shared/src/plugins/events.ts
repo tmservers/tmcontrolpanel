@@ -46,6 +46,34 @@ export function isPluginEvent(name: string): name is PluginEventName {
   return (PLUGIN_EVENT_NAMES as readonly string[]).includes(name);
 }
 
+// Raw dedicated server callbacks: "gbx:ManiaPlanet.PlayerCheckpoint" for an XML-RPC callback,
+// "gbx:Trackmania.Event.WayPoint" for a mode script callback, "gbx:*" for all of them
+export const GBX_EVENT_PREFIX = "gbx:";
+const GBX_EVENT_KEY = /^gbx:([A-Za-z0-9_.]{1,100}|\*)$/;
+
+// A callback as plugins receive it. XML-RPC callbacks keep their method name with the params
+// array as payload; mode script callbacks use the script callback name with the JSON parsed.
+export interface GbxCallback {
+  name: string;
+  payload: unknown;
+}
+
+// Never delivered raw: manialink answers carry other plugins' window input (an ECM key for
+// instance) and tunnel data is private client-to-server traffic
+const PRIVATE_GBX_CALLBACKS = new Set([
+  "ManiaPlanet.PlayerManialinkPageAnswer",
+  "ManiaPlanet.TunnelDataReceived",
+]);
+
+export function isPrivateGbxCallback(name: string): boolean {
+  return PRIVATE_GBX_CALLBACKS.has(name);
+}
+
+// The callback name of "gbx:<name>", "*" for "gbx:*", null when the key isn't a gbx key
+export function parseGbxEventKey(key: string): string | null {
+  return GBX_EVENT_KEY.exec(key)?.[1] ?? null;
+}
+
 // Events plugins emit themselves. Listeners use "<slug>:<name>"; the slug is set by the host,
 // so a plugin can only emit under its own name.
 export const CUSTOM_EVENT_NAME = /^[A-Za-z0-9_.-]{1,64}$/;

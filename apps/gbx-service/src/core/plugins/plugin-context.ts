@@ -19,6 +19,7 @@ import { Window } from "../manialink/components/window";
 import type { ManialinkService } from "../manialink/manialink-service";
 import type {
   Clock,
+  ErrorReporter,
   NadeoRecordsProvider,
   NotificationRepository,
   RecordRepository,
@@ -57,6 +58,7 @@ export interface PluginServices {
   nadeo: NadeoRecordsProvider;
   clock: Clock;
   manialinks: ManialinkService;
+  errors: ErrorReporter;
   disablePlugin(pluginId: string, name: string, reason: string): Promise<void>;
 }
 
@@ -215,6 +217,12 @@ export function createPluginContext(
     },
     disable: (reason) =>
       services.disablePlugin(record.pluginId, definition.id, reason),
+    captureException(error, extra, tags) {
+      services.errors.captureException(error, {
+        tags: { ...tags, plugin: definition.id, serverId: services.serverId },
+        extra,
+      });
+    },
     async notifyAdmins(message, description) {
       const notifications = await services.notifications.createForServerAdmins({
         serverId: services.serverId,

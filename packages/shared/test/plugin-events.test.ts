@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { matchesCustomEvent, parseCustomEventKey } from "../src/plugins/events";
+import {
+  isPrivateGbxCallback,
+  matchesCustomEvent,
+  parseCustomEventKey,
+  parseGbxEventKey,
+} from "../src/plugins/events";
 
 describe("custom plugin events", () => {
   it("parses listener keys", () => {
@@ -31,5 +36,27 @@ describe("custom plugin events", () => {
     expect(matchesCustomEvent({ plugin: "scorer", name: "*" }, event)).toBe(
       false,
     );
+  });
+});
+
+describe("raw GBX plugin events", () => {
+  it("parses valid callback keys and rejects invalid names", () => {
+    expect(parseGbxEventKey("gbx:ManiaPlanet.PlayerCheckpoint")).toBe(
+      "ManiaPlanet.PlayerCheckpoint",
+    );
+    expect(parseGbxEventKey("gbx:*")).toBe("*");
+    expect(parseGbxEventKey("gbx:a")).toBe("a");
+    expect(parseGbxEventKey("gbx:")).toBeNull();
+    expect(parseGbxEventKey("gbx:a b")).toBeNull();
+    expect(parseGbxEventKey(`gbx:${"a".repeat(101)}`)).toBeNull();
+    expect(parseGbxEventKey("other:callback")).toBeNull();
+  });
+
+  it("identifies callbacks with private player data", () => {
+    expect(isPrivateGbxCallback("ManiaPlanet.PlayerManialinkPageAnswer")).toBe(
+      true,
+    );
+    expect(isPrivateGbxCallback("ManiaPlanet.TunnelDataReceived")).toBe(true);
+    expect(isPrivateGbxCallback("ManiaPlanet.PlayerCheckpoint")).toBe(false);
   });
 });

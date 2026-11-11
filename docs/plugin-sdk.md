@@ -70,19 +70,19 @@ A package may be at most 5 MB, unpack to at most 10 MB and hold at most 500 file
 }
 ```
 
-| Field                               | Rules                                                                                                                                                                                                                                                                                                                               |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `slug`                              | 3-40 characters: lowercase letters, digits and dashes, starting with a letter and not ending in a dash, with no double dashes. It identifies the plugin and prefixes its widget ids and actions. The names of the [first-party plugins](./first-party-plugins.md) and a few others (`help`, `plugins`, `server`, ...) are reserved. |
-| `name`, `description`, `author`     | At most 60, 300 and 100 characters.                                                                                                                                                                                                                                                                                                 |
-| `version`                           | A [semantic version](https://semver.org): `1.2.3`, or `1.2.3-beta.1` for a pre-release.                                                                                                                                                                                                                                             |
-| `sdk`                               | The plugin SDK version the plugin targets. Currently `5` (SDK 1 to 4 packages remain supported). SDK 3 adds [plugin events](#plugin-events), SDK 4 adds the [theme](#widgets-and-windows) colors, SDK 5 adds admin checks, admin-only buttons and the shared table helper. Panels refuse plugins for a newer SDK than they run.     |
-| `license`, `repository`, `homepage` | Optional. The links must be `https://`.                                                                                                                                                                                                                                                                                             |
-| `entry`                             | Path of the bundle inside the package. Default `index.js`.                                                                                                                                                                                                                                                                          |
-| `gamemodes`                         | Modes the plugin runs in: `timeattack`, `rounds`, `reversecup`, `cup`, `tmwc`, `tmwt`, `teams`, `knockout`. Leave it out to run in every mode.                                                                                                                                                                                      |
-| `commands`                          | Chat commands the plugin may register, without the slash. At most 20, each 1-32 lowercase letters, digits, `-` or `_`. `help`, `version`, `uptime`, `status`, `plugins`, `ping`, `sysinfo`, `diagnostics`, `co` and `ai` belong to the panel.                                                                                       |
-| `capabilities`                      | What the plugin may do. See [Capabilities](#capabilities).                                                                                                                                                                                                                                                                          |
-| `configSchema`                      | The plugin's settings form. See [Settings](#settings).                                                                                                                                                                                                                                                                              |
-| `helpText`                          | Shown by `/help <slug>`. At most 1000 characters.                                                                                                                                                                                                                                                                                   |
+| Field                               | Rules                                                                                                                                                                                                                                                                                                                                                                   |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `slug`                              | 3-40 characters: lowercase letters, digits and dashes, starting with a letter and not ending in a dash, with no double dashes. It identifies the plugin and prefixes its widget ids and actions. The names of the [first-party plugins](./first-party-plugins.md) and a few others (`help`, `plugins`, `server`, ...) are reserved.                                     |
+| `name`, `description`, `author`     | At most 60, 300 and 100 characters.                                                                                                                                                                                                                                                                                                                                     |
+| `version`                           | A [semantic version](https://semver.org): `1.2.3`, or `1.2.3-beta.1` for a pre-release.                                                                                                                                                                                                                                                                                 |
+| `sdk`                               | The plugin SDK version the plugin targets. Currently `5` (SDK 1 to 4 packages remain supported). SDK 3 adds [plugin events](#plugin-events), SDK 4 adds the [theme](#widgets-and-windows) colors, SDK 5 adds admin checks, admin-only buttons, the shared table helper, raw GBX callbacks and exception reporting. Panels refuse plugins for a newer SDK than they run. |
+| `license`, `repository`, `homepage` | Optional. The links must be `https://`.                                                                                                                                                                                                                                                                                                                                 |
+| `entry`                             | Path of the bundle inside the package. Default `index.js`.                                                                                                                                                                                                                                                                                                              |
+| `gamemodes`                         | Modes the plugin runs in: `timeattack`, `rounds`, `reversecup`, `cup`, `tmwc`, `tmwt`, `teams`, `knockout`. Leave it out to run in every mode.                                                                                                                                                                                                                          |
+| `commands`                          | Chat commands the plugin may register, without the slash. At most 20, each 1-32 lowercase letters, digits, `-` or `_`. `help`, `version`, `uptime`, `status`, `plugins`, `ping`, `sysinfo`, `diagnostics`, `co` and `ai` belong to the panel.                                                                                                                           |
+| `capabilities`                      | What the plugin may do. See [Capabilities](#capabilities).                                                                                                                                                                                                                                                                                                              |
+| `configSchema`                      | The plugin's settings form. See [Settings](#settings).                                                                                                                                                                                                                                                                                                                  |
+| `helpText`                          | Shown by `/help <slug>`. At most 1000 characters.                                                                                                                                                                                                                                                                                                                       |
 
 The manifest is strict: a field that isn't in this table makes the package invalid.
 
@@ -183,6 +183,24 @@ Ask only for what the plugin needs. Reviewers turn down plugins that ask for mor
 
 The `live-*` events fire after the live state was updated, so use those to render it. Answers to other plugins' manialinks are not available. Use `ctx.action` for your own.
 
+### Raw GBX callbacks (SDK 5)
+
+Subscribe with `gbx:<name>` to receive a dedicated server callback. XML-RPC payloads are params arrays; mode script payloads are parsed JSON (or text if parsing fails). `gbx:*` receives every callback, so subscribe only to what you need. Manialink answers and tunnel data are never delivered; use `ctx.action()` for your own pages. No capability is needed, and `gbx` is a reserved slug.
+
+```ts
+// A mode script callback the panel doesn't turn into an event
+ctx.on("gbx:Trackmania.Event.Respawn", (event: { login: string }) => {
+  ctx.log.info(`${event.login} respawned`);
+});
+
+// An XML-RPC callback: the payload is the params array
+ctx.on("gbx:ManiaPlanet.PlayerAlliesChanged", ([login]: [string]) => {
+  ctx.log.info(`${login} changed allies`);
+});
+```
+
+Callbacks count toward the same entry time and CPU limits as other events, so `gbx:*` can be expensive on a busy server.
+
 ### Plugin events
 
 Plugins can talk to each other through events. `ctx.emit(name, payload)` sends an event under your own slug, and other plugins listen with `"<slug>:<name>"`:
@@ -200,6 +218,18 @@ ctx.on<{ login: string; time: number }>(
 );
 // Every event of the "records" plugin
 ctx.on("records:*", (payload, source) => ctx.log.debug(source.name, payload));
+```
+
+### Reporting exceptions (SDK 5)
+
+Use `ctx.captureException(error, extra?)` to report an exception to the panel operator's Sentry, tagged with your plugin slug and version, the server id, and `source: plugin`. It is a no-op when Sentry is not configured. At most 10 reports per minute per plugin per server are kept; extra reports are dropped and the plugin keeps running. `extra` must be a plain object of at most 4 KB of JSON, or it is left out. Messages are capped at 1024 characters.
+
+```ts
+try {
+  await doWork();
+} catch (error) {
+  ctx.captureException(error, { task: "sync" });
+}
 ```
 
 - Names use 1-64 letters, digits, `-`, `_` and `.`. The slug comes from the host, so a plugin cannot emit as another one.

@@ -113,7 +113,7 @@ function sameTarget(a: ConnectionTarget, b: ConnectionTarget): boolean {
   );
 }
 
-const NOTICE_PREFIX = "$<$0cfTMControlPanel$>: ";
+const NOTICE_PREFIX = "$<$0c6TMControlPanel$>: ";
 // A goodbye message must not hold up a handover
 const NOTICE_TIMEOUT_MS = 1000;
 

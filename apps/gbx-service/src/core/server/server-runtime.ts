@@ -21,7 +21,7 @@ import {
 import { AppError, errorMessage } from "../errors";
 import { TypedEventBus } from "../events";
 import { ActiveConnection } from "../gbx/active-connection";
-import { parseCallback } from "../gbx/callbacks";
+import { parseCallback, toGbxCallback } from "../gbx/callbacks";
 import type {
   GbxConnection,
   GbxSession,
@@ -37,19 +37,21 @@ import { createPluginContext } from "../plugins/plugin-context";
 import { PluginHost } from "../plugins/plugin-host";
 import type { PackageLoader } from "../plugins/sandbox/package-loader";
 import type { PluginDefinition } from "../plugins/sdk";
-import type {
-  Clock,
-  JukeboxStore,
-  MapMetadataProvider,
-  MapRepository,
-  MatchRepository,
-  NadeoRecordsProvider,
-  NotificationRepository,
-  PlayerRepository,
-  RecordRepository,
-  ServerRecord,
-  ServerRepository,
-  UserRepository,
+import {
+  noopErrorReporter,
+  type Clock,
+  type ErrorReporter,
+  type JukeboxStore,
+  type MapMetadataProvider,
+  type MapRepository,
+  type MatchRepository,
+  type NadeoRecordsProvider,
+  type NotificationRepository,
+  type PlayerRepository,
+  type RecordRepository,
+  type ServerRecord,
+  type ServerRepository,
+  type UserRepository,
 } from "../ports";
 import { ConnectionSupervisor } from "./connection-supervisor";
 import { GameEventHandler } from "./game-event-handler";
@@ -58,6 +60,7 @@ import { LiveSync } from "./live-sync";
 import { MapCatalog } from "./map-catalog";
 import { MapList } from "./map-list";
 import { MatchRecorder } from "./match-recorder";
+import { ServerAdmins } from "./server-admins";
 import { ServerCommands } from "./server-commands";
 import type { ServerEventMap } from "./server-events";
 
@@ -82,6 +85,8 @@ export interface RuntimeDependencies {
   jukebox: JukeboxStore;
   mapMetadata: MapMetadataProvider;
   nadeo: NadeoRecordsProvider;
+  // Where plugins' captureException goes; reports are dropped without it
+  errors?: ErrorReporter;
   connectTimeoutMs?: number;
   retryDelayMs?: number;
   maxRetries?: number;
@@ -162,6 +167,15 @@ export class ServerRuntime {
       theme: () => state.theme,
     };
     const actionGroup = new ActionGroup(manialinkDeps);
+    const admins = new ServerAdmins(
+      serverId,
+      deps.systemCommands
+        ? (id, login) => deps.systemCommands!.isAdmin(id, login)
+        : null,
+      clock,
+      log,
+    );
+    admins.onChange((logins) => actionGroup.setAdmins(logins));
     const mapList = new MapList(gbx, log);
     const catalog = new MapCatalog(deps.maps, deps.mapMetadata, clock, log);
 
@@ -251,6 +265,7 @@ export class ServerRuntime {
             actions,
             manialinkDeps,
             actionGroup,
+            admins,
             mapList,
             catalog,
             records: deps.records,
@@ -259,6 +274,7 @@ export class ServerRuntime {
             nadeo: deps.nadeo,
             clock,
             manialinks: this.manialinks,
+            errors: deps.errors ?? noopErrorReporter,
             disablePlugin: (pluginId, name, reason) =>
               this.disablePlugin(pluginId, name, reason),
           },
@@ -285,9 +301,16 @@ export class ServerRuntime {
     });
 
     bus.on("playerConnect", (player) =>
-      this.manialinks.onPlayerConnect(player.login),
+      Promise.all([
+        this.manialinks.onPlayerConnect(player.login),
+        admins.playerConnected(player.login),
+      ]),
+    );
+    bus.on("playerList", (players) =>
+      admins.sync(players.map((player) => player.login)),
     );
     bus.on("playerDisconnect", (login) => {
+      admins.playerDisconnected(login);
       this.codriverWindows?.forget(login);
       this.manialinks.onPlayerDisconnect(login);
     });
@@ -634,6 +657,10 @@ export class ServerRuntime {
   }
 
   private onCallback(method: string, data: unknown): void {
+    // Raw, for plugins that need a callback the runtime doesn't handle
+    if (this.events.listenerCount("gbxCallback") > 0) {
+      this.events.emit("gbxCallback", toGbxCallback(method, data));
+    }
     let event;
     try {
       event = parseCallback(method, data);

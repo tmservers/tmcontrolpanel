@@ -2,6 +2,11 @@
 
 Release notes of TMControlPanel, newest first. The entries are the descriptions of the [GitHub releases](https://github.com/tmservers/tmcontrolpanel/releases).
 
+## [Unreleased]
+
+### New Features
+- **Plugin SDK 5.** Plugins can check whether a player is a server admin, show action buttons only to connected admins, build paginated tables with the shared table partial, subscribe to any dedicated server callback with `gbx:` events, and report exceptions to Sentry with `ctx.captureException`.
+
 ## [1.0.0] - 2026-11-06
 
 ### TMControlPanel Release

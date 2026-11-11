@@ -58,6 +58,10 @@ export type PluginEventName = keyof PluginEvents;
 // Another plugin's event: "<slug>:<name>", or "<slug>:*" for all of them
 export type CustomEventKey = `${string}:${string}`;
 
+// A raw dedicated server callback: "gbx:ManiaPlanet.PlayerCheckpoint" (XML-RPC, params array as
+// payload), "gbx:Trackmania.Event.WayPoint" (mode script, parsed JSON as payload) or "gbx:*"
+export type GbxEventKey = `gbx:${string}`;
+
 export interface CustomEventSource {
   // Slug of the plugin that emitted it
   plugin: string;
@@ -116,6 +120,9 @@ export interface ActionButton {
   type?: "image" | "text";
   // Action name registered with ctx.action()
   action?: string;
+  // Only connected panel admins of this server see the button (SDK 5). Still check
+  // ctx.players.isAdmin in the action handler: anyone can send any action.
+  adminOnly?: boolean;
 }
 
 export interface ManialinkAnswer {
@@ -168,7 +175,10 @@ export interface Logger {
 }
 
 export type CommandHandler = (args: string[], login: string) => unknown;
-export type ActionHandler = (answer: ManialinkAnswer, params: Record<string, string>) => unknown;
+export type ActionHandler = (
+  answer: ManialinkAnswer,
+  params: Record<string, string>,
+) => unknown;
 
 // What a plugin can use. Calls behind a capability the plugin didn't declare throw.
 export interface PluginContext<Config = Record<string, unknown>> {
@@ -182,11 +192,22 @@ export interface PluginContext<Config = Record<string, unknown>> {
   saveConfig(config: Config): Promise<void>;
   serverName(): string | null;
 
-  on<K extends PluginEventName>(event: K, handler: (...args: PluginEvents[K]) => unknown): void;
+  on<K extends PluginEventName>(
+    event: K,
+    handler: (...args: PluginEvents[K]) => unknown,
+  ): void;
+  // Manialink answers and tunnel data are never delivered; use ctx.action() for your own pages
+  on<T = unknown>(
+    event: GbxEventKey,
+    handler: (payload: T, name: string) => unknown,
+  ): void;
   on<T = unknown>(
     event: CustomEventKey,
     handler: (payload: T, source: CustomEventSource) => unknown,
   ): void;
+  // Reports to the panel operator's Sentry with your slug, version and the server as tags.
+  // A no-op without Sentry; at most 10 reports a minute, extra is capped at 4 KB of JSON.
+  captureException(error: unknown, extra?: Record<string, unknown>): void;
   // Sends "<your slug>:<name>" to every listener on this server, after the current call returns.
   // The payload is copied as JSON, at most 64 KB.
   emit(name: string, payload?: unknown): void;
@@ -213,6 +234,8 @@ export interface PluginContext<Config = Record<string, unknown>> {
   };
   readonly players: {
     get(login: string): Promise<PlayerInfo>;
+    // Whether the login holds a panel admin role on this server (SDK 5)
+    isAdmin(login: string): Promise<boolean>;
   };
 
   // Capability "ui"
@@ -247,7 +270,10 @@ export interface PluginContext<Config = Record<string, unknown>> {
   // Capability "nadeo:read"
   readonly nadeo: {
     worldRecord(mapUid: string): Promise<LeaderboardEntry | null>;
-    personalBests(mapUid: string, accountIds: string[]): Promise<Record<string, number>>;
+    personalBests(
+      mapUid: string,
+      accountIds: string[],
+    ): Promise<Record<string, number>>;
     accountNames(accountIds: string[]): Promise<Record<string, string>>;
   };
   // Capability "notifications"

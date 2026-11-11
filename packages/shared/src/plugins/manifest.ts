@@ -39,6 +39,8 @@ const RESERVED_SLUGS = new Set<string>([
   "server",
   // Codriver emits "codriver:*" events; a plugin with this slug could fake them
   "codriver",
+  // "gbx:*" subscribes to raw dedicated server callbacks
+  "gbx",
 ]);
 
 export const PLUGIN_SLUG = /^[a-z][a-z0-9-]{1,38}[a-z0-9]$/;

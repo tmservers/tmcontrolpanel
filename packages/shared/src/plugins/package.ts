@@ -1,5 +1,5 @@
-import { createHash } from "node:crypto";
 import { strToU8, unzipSync, zipSync, type Zippable } from "fflate";
+import { createHash } from "node:crypto";
 import { MANIFEST_FILE, parseManifest, type PluginManifest } from "./manifest";
 
 // Reads and writes plugin packages: a zip with tmcp-plugin.json, one JavaScript bundle and
@@ -18,7 +18,13 @@ export const PACKAGE_LIMITS = {
 } as const;
 
 // Layouts every plugin template can extend; a package can't replace them
-export const BASE_TEMPLATES = ["manialink", "widget", "window", "scripts/hide"] as const;
+export const BASE_TEMPLATES = [
+  "manialink",
+  "widget",
+  "window",
+  "scripts/hide",
+  "components/table",
+] as const;
 
 const TEMPLATE_NAME = /^[A-Za-z0-9_-]+(\/[A-Za-z0-9_-]+){0,4}$/;
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
@@ -41,7 +47,11 @@ export interface PluginPackage {
 
 export class PluginPackageError extends Error {
   constructor(readonly issues: string[]) {
-    super(issues.length === 1 ? issues[0] : `Invalid plugin package: ${issues.join("; ")}`);
+    super(
+      issues.length === 1
+        ? issues[0]
+        : `Invalid plugin package: ${issues.join("; ")}`,
+    );
     this.name = "PluginPackageError";
   }
 }
@@ -52,7 +62,11 @@ export function sha256Hex(bytes: Uint8Array): string {
 
 const decoder = new TextDecoder("utf-8", { fatal: true });
 
-function decodeText(name: string, bytes: Uint8Array, issues: string[]): string | null {
+function decodeText(
+  name: string,
+  bytes: Uint8Array,
+  issues: string[],
+): string | null {
   try {
     // Leading BOMs break JSON.parse and show up in templates
     return decoder.decode(bytes).replace(/^﻿/, "");
@@ -64,8 +78,10 @@ function decodeText(name: string, bytes: Uint8Array, issues: string[]): string |
 
 function checkPath(name: string): string | null {
   if (name.length > 200) return `Path too long: ${name.slice(0, 50)}...`;
-  if (name.includes("\\") || name.includes("\0")) return `Invalid path: ${name}`;
-  if (name.startsWith("/") || /^[A-Za-z]:/.test(name)) return `Absolute path: ${name}`;
+  if (name.includes("\\") || name.includes("\0"))
+    return `Invalid path: ${name}`;
+  if (name.startsWith("/") || /^[A-Za-z]:/.test(name))
+    return `Absolute path: ${name}`;
   if (name.split("/").some((part) => part === ".." || part === ".")) {
     return `Path leaves the package: ${name}`;
   }
@@ -81,7 +97,9 @@ function isIgnored(name: string): boolean {
 }
 
 // Zips made by "compress folder" put everything in one top-level folder
-function stripCommonFolder(files: Record<string, Uint8Array>): Record<string, Uint8Array> {
+function stripCommonFolder(
+  files: Record<string, Uint8Array>,
+): Record<string, Uint8Array> {
   const names = Object.keys(files);
   if (names.includes(MANIFEST_FILE) || names.length === 0) return files;
 
@@ -89,7 +107,10 @@ function stripCommonFolder(files: Record<string, Uint8Array>): Record<string, Ui
   if (!names.every((name) => name.startsWith(`${first}/`))) return files;
 
   return Object.fromEntries(
-    Object.entries(files).map(([name, bytes]) => [name.slice(first.length + 1), bytes]),
+    Object.entries(files).map(([name, bytes]) => [
+      name.slice(first.length + 1),
+      bytes,
+    ]),
   );
 }
 
@@ -129,7 +150,9 @@ function unpack(bytes: Uint8Array): Record<string, Uint8Array> {
     issues.push(`More than ${PACKAGE_LIMITS.maxFiles} files`);
   }
   if (declared > PACKAGE_LIMITS.maxUnpackedBytes) {
-    issues.push(`Unpacks to more than ${PACKAGE_LIMITS.maxUnpackedBytes / 1024 / 1024} MB`);
+    issues.push(
+      `Unpacks to more than ${PACKAGE_LIMITS.maxUnpackedBytes / 1024 / 1024} MB`,
+    );
   }
   if (issues.length > 0) throw new PluginPackageError(issues);
 
@@ -147,7 +170,8 @@ export function readPluginPackage(bytes: Uint8Array): PluginPackage {
   const issues: string[] = [];
 
   const manifestBytes = files[MANIFEST_FILE];
-  if (!manifestBytes) throw new PluginPackageError([`${MANIFEST_FILE} is missing`]);
+  if (!manifestBytes)
+    throw new PluginPackageError([`${MANIFEST_FILE} is missing`]);
   if (manifestBytes.byteLength > PACKAGE_LIMITS.maxManifestBytes) {
     throw new PluginPackageError([`${MANIFEST_FILE} is too large`]);
   }
@@ -244,11 +268,16 @@ export function readPluginPackage(bytes: Uint8Array): PluginPackage {
 }
 
 // Packs files (path -> content) into a plugin zip with stable timestamps
-export function createPluginPackage(files: Record<string, string | Uint8Array>): Uint8Array {
+export function createPluginPackage(
+  files: Record<string, string | Uint8Array>,
+): Uint8Array {
   const zippable: Zippable = {};
   for (const name of Object.keys(files).sort()) {
     const content = files[name];
-    zippable[name] = [typeof content === "string" ? strToU8(content) : content, {}];
+    zippable[name] = [
+      typeof content === "string" ? strToU8(content) : content,
+      {},
+    ];
   }
   return zipSync(zippable, { level: 9, mtime: ZIP_MTIME });
 }

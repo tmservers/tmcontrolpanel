@@ -62,11 +62,13 @@ export function getTeamColors(teamName?: string): TeamColors {
   return TEAM_COLORS[teamName.toLowerCase()] ?? TEAM_COLORS.default;
 }
 
-const BASE64URL = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+const BASE64URL =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
 // Logins are the url-safe base64 of the Ubisoft account id; fake players have no account
 export function loginToAccountId(login: string): string | null {
-  if (login.includes("fakeplayer") || !/^[A-Za-z0-9_-]{22}$/.test(login)) return null;
+  if (login.includes("fakeplayer") || !/^[A-Za-z0-9_-]{22}$/.test(login))
+    return null;
 
   const bytes: number[] = [];
   let buffer = 0;
@@ -113,12 +115,17 @@ export class MapList {
     const pageSize = 100;
     let all: MapInfoMinimal[] = [];
     for (let start = 0; ; start += pageSize) {
-      const batch = await this.ctx.gbx.call<MapInfoMinimal[]>("GetMapList", pageSize, start);
+      const batch = await this.ctx.gbx.call<MapInfoMinimal[]>(
+        "GetMapList",
+        pageSize,
+        start,
+      );
       if (!Array.isArray(batch) || batch.length === 0) break;
       all = all.concat(batch);
       if (batch.length < pageSize) break;
     }
-    if (all.length === 0) throw new Error("Failed to retrieve the map list from the server");
+    if (all.length === 0)
+      throw new Error("Failed to retrieve the map list from the server");
     return all;
   }
 
@@ -127,10 +134,15 @@ export class MapList {
     const infos: SMapInfo[] = [];
     for (const fileName of fileNames) {
       try {
-        const info = await this.ctx.gbx.call<SMapInfo | undefined>("GetMapInfo", fileName);
+        const info = await this.ctx.gbx.call<SMapInfo | undefined>(
+          "GetMapInfo",
+          fileName,
+        );
         if (info) infos.push(info);
       } catch (error) {
-        this.ctx.log.warn(`Failed to get map info for ${fileName}`, { error: String(error) });
+        this.ctx.log.warn(`Failed to get map info for ${fileName}`, {
+          error: String(error),
+        });
       }
     }
     return infos;
@@ -140,13 +152,15 @@ export class MapList {
   async replace(fileNames: string[]): Promise<void> {
     await this.ctx.gbx.call("RemoveMapList", fileNames);
     const added = await this.ctx.gbx.call("AddMapList", fileNames);
-    if (typeof added !== "number") throw new Error("Failed to add maps to the map list");
+    if (typeof added !== "number")
+      throw new Error("Failed to add maps to the map list");
 
     const others = (await this.getAll())
       .map((map) => map.FileName)
       .filter((fileName) => !fileNames.includes(fileName));
     const removed = await this.ctx.gbx.call("RemoveMapList", others);
-    if (typeof removed !== "number") throw new Error("Failed to remove maps from the map list");
+    if (typeof removed !== "number")
+      throw new Error("Failed to remove maps from the map list");
   }
 
   async jumpTo(index: number): Promise<void> {
@@ -160,7 +174,11 @@ export class MapList {
 
 // Runs fn right away, then at most once per ms however often it is called. Live widgets
 // use it so a burst of checkpoints doesn't send a page for every single one.
-export function throttle(ctx: PluginContext<any>, fn: () => void, ms: number): () => void {
+export function throttle(
+  ctx: PluginContext<any>,
+  fn: () => void,
+  ms: number,
+): () => void {
   let waiting = false;
   let pending = false;
 
@@ -181,3 +199,103 @@ export function throttle(ctx: PluginContext<any>, fn: () => void, ms: number): (
     else run();
   };
 }
+
+export interface TableColumn<Row> {
+  title: string;
+  width: number;
+  align?: "left" | "center" | "right";
+  // Cell text; defaults to row[key]
+  key?: keyof Row & string;
+  text?: (row: Row) => unknown;
+  // Text color override (3-digit hex), e.g. to flag a status
+  color?: (row: Row) => string | null | undefined;
+}
+
+export interface TableOptions<Row> {
+  columns: TableColumn<Row>[];
+  rows: readonly Row[];
+  // 1-based; clamped to the available pages
+  page?: number;
+  pageSize?: number;
+  rowHeight?: number;
+  empty?: string;
+}
+
+export interface TableCell {
+  text: string;
+  color: string | null;
+  x: number;
+  width: number;
+  halign: "left" | "center" | "right";
+}
+
+// Data for the components/table base template: {{> components/table table=data.table prev=... next=...}}
+export function buildTable<Row>(options: TableOptions<Row>) {
+  const rowHeight = options.rowHeight ?? 4;
+  const pageSize = Math.max(1, Math.floor(options.pageSize ?? 10));
+  const total = options.rows.length;
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const page = Math.min(Math.max(1, Math.floor(options.page ?? 1)), pages);
+  const start = (page - 1) * pageSize;
+
+  let offset = 0;
+  const layout = options.columns.map((column) => {
+    const x = offset;
+    offset += column.width;
+    const halign = column.align ?? "left";
+    // Labels anchor on their alignment edge, with a small inset
+    const labelX =
+      halign === "left"
+        ? x + 1
+        : halign === "right"
+          ? x + column.width - 1
+          : x + column.width / 2;
+    return { column, x: labelX, width: Math.max(1, column.width - 2), halign };
+  });
+
+  const rows = options.rows
+    .slice(start, start + pageSize)
+    .map((row, index) => ({
+      y: -(rowHeight + index * rowHeight),
+      odd: index % 2 === 1,
+      cells: layout.map(({ column, x, width, halign }): TableCell => {
+        const value = column.text
+          ? column.text(row)
+          : column.key
+            ? row[column.key]
+            : "";
+        return {
+          text: value === null || value === undefined ? "" : String(value),
+          color: column.color?.(row) ?? null,
+          x,
+          width,
+          halign,
+        };
+      }),
+    }));
+
+  return {
+    width: offset,
+    rowHeight,
+    textY: -rowHeight / 2,
+    // The pager stays put on short pages, below a full page of rows
+    pagerY: -(rowHeight * (pageSize + 1) + 1),
+    columns: layout.map(({ column, x, width, halign }) => ({
+      title: column.title,
+      x,
+      width,
+      halign,
+    })),
+    rows,
+    page,
+    pages,
+    total,
+    from: total === 0 ? 0 : start + 1,
+    to: start + rows.length,
+    hasPrev: page > 1,
+    hasNext: page < pages,
+    empty: options.empty ?? "Nothing to show",
+  };
+}
+
+export type Table = ReturnType<typeof buildTable>;

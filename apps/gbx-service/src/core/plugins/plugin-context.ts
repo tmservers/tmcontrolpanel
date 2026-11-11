@@ -11,11 +11,15 @@ import type { LiveState } from "../live/live-state";
 import type { Logger } from "../logger";
 import type { ActionRouter } from "../manialink/action-router";
 import type { ActionGroup } from "../manialink/components/action-group";
-import { Manialink, type ManialinkDeps } from "../manialink/components/manialink";
+import {
+  Manialink,
+  type ManialinkDeps,
+} from "../manialink/components/manialink";
 import { Window } from "../manialink/components/window";
 import type { ManialinkService } from "../manialink/manialink-service";
 import type {
   Clock,
+  ErrorReporter,
   NadeoRecordsProvider,
   NotificationRepository,
   RecordRepository,
@@ -25,6 +29,7 @@ import type {
 import type { MapCatalog } from "../server/map-catalog";
 import type { MapList } from "../server/map-list";
 import { fetchPlayerInfo } from "../server/players";
+import type { ServerAdmins } from "../server/server-admins";
 import type { ServerCommands } from "../server/server-commands";
 import type { ServerEventMap } from "../server/server-events";
 import type { ScopedContext } from "./plugin-host";
@@ -44,6 +49,7 @@ export interface PluginServices {
   actions: ActionRouter;
   manialinkDeps: ManialinkDeps;
   actionGroup: ActionGroup;
+  admins: Pick<ServerAdmins, "isAdmin">;
   mapList: MapList;
   catalog: MapCatalog;
   records: RecordRepository;
@@ -52,6 +58,7 @@ export interface PluginServices {
   nadeo: NadeoRecordsProvider;
   clock: Clock;
   manialinks: ManialinkService;
+  errors: ErrorReporter;
   disablePlugin(pluginId: string, name: string, reason: string): Promise<void>;
 }
 
@@ -66,7 +73,10 @@ function parseConfig(
   if (result.success) return result.data;
 
   // Keep running on the raw value so a config written by an older form never disables a plugin
-  log.warn({ issues: result.error.issues }, "Plugin config does not match its schema");
+  log.warn(
+    { issues: result.error.issues },
+    "Plugin config does not match its schema",
+  );
   return raw ?? null;
 }
 
@@ -97,9 +107,15 @@ export function createPluginContext(
     theme: () => services.state.theme,
 
     async saveConfig(next) {
-      await services.servers.updatePluginConfig(services.serverId, record.pluginId, next);
+      await services.servers.updatePluginConfig(
+        services.serverId,
+        record.pluginId,
+        next,
+      );
       config = next;
-      const stored = services.state.plugins.find((p) => p.pluginId === record.pluginId);
+      const stored = services.state.plugins.find(
+        (p) => p.pluginId === record.pluginId,
+      );
       if (stored) stored.config = next;
     },
 
@@ -113,9 +129,15 @@ export function createPluginContext(
       // A JSON copy, so listeners never share objects with the emitter
       const json = JSON.stringify(payload ?? null);
       if (Buffer.byteLength(json, "utf8") > MAX_CUSTOM_EVENT_BYTES) {
-        throw new Error(`Event payloads may be at most ${MAX_CUSTOM_EVENT_BYTES / 1024} KB`);
+        throw new Error(
+          `Event payloads may be at most ${MAX_CUSTOM_EVENT_BYTES / 1024} KB`,
+        );
       }
-      const event: PluginCustomEvent = { plugin: definition.id, name, payload: JSON.parse(json) };
+      const event: PluginCustomEvent = {
+        plugin: definition.id,
+        name,
+        payload: JSON.parse(json),
+      };
       // Later, so a listener never runs inside the emitter's call
       queueMicrotask(() => {
         if (!disposed) services.bus.emit("pluginEvent", event);
@@ -160,7 +182,8 @@ export function createPluginContext(
           if (!pages.has(pageKey(id, login))) {
             pages.add(pageKey(id, login));
             cleanup.add(() => {
-              if (pages.delete(pageKey(id, login))) services.manialinks.destroy(id, login);
+              if (pages.delete(pageKey(id, login)))
+                services.manialinks.destroy(id, login);
             });
           }
           services.manialinks.display(id, xml, login);
@@ -179,17 +202,27 @@ export function createPluginContext(
       get: async (login) =>
         services.state.findActivePlayer(login) ??
         (await fetchPlayerInfo(services.gbx, login)),
+      isAdmin: (login) => services.admins.isAdmin(login),
     },
     maps: {
       findByUid: (uid) => services.catalog.findByUid(uid),
-      findByFileNames: (fileNames) => services.catalog.findByFileNames(fileNames),
+      findByFileNames: (fileNames) =>
+        services.catalog.findByFileNames(fileNames),
     },
     records: {
-      local: (mapUid) => services.records.findLocalRecord(services.serverId, mapUid),
+      local: (mapUid) =>
+        services.records.findLocalRecord(services.serverId, mapUid),
       forPlayers: (mapUid, logins) =>
         services.records.findPlayerRecords(services.serverId, mapUid, logins),
     },
-    disable: (reason) => services.disablePlugin(record.pluginId, definition.id, reason),
+    disable: (reason) =>
+      services.disablePlugin(record.pluginId, definition.id, reason),
+    captureException(error, extra, tags) {
+      services.errors.captureException(error, {
+        tags: { ...tags, plugin: definition.id, serverId: services.serverId },
+        extra,
+      });
+    },
     async notifyAdmins(message, description) {
       const notifications = await services.notifications.createForServerAdmins({
         serverId: services.serverId,

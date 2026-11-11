@@ -1,13 +1,54 @@
 import { describe, expect, it } from "vitest";
-import { parseCallback } from "../../src/core/gbx/callbacks";
+import { parseCallback, toGbxCallback } from "../../src/core/gbx/callbacks";
+
+describe("toGbxCallback", () => {
+  it("preserves XML-RPC callback names and array payloads", () => {
+    expect(toGbxCallback("ManiaPlanet.PlayerCheckpoint", ["p1", 2])).toEqual({
+      name: "ManiaPlanet.PlayerCheckpoint",
+      payload: ["p1", 2],
+    });
+    expect(toGbxCallback("ManiaPlanet.PlayerCheckpoint", null)).toEqual({
+      name: "ManiaPlanet.PlayerCheckpoint",
+      payload: [],
+    });
+  });
+
+  it.each([
+    "ManiaPlanet.ModeScriptCallbackArray",
+    "ManiaPlanet.ModeScriptCallback",
+  ])("parses mode script JSON payloads for %s", (method) => {
+    expect(
+      toGbxCallback(method, ["Trackmania.Event.WayPoint", ['{"login":"p1"}']]),
+    ).toEqual({
+      name: "Trackmania.Event.WayPoint",
+      payload: { login: "p1" },
+    });
+    expect(toGbxCallback(method, ["custom.event", "plain text"])).toEqual({
+      name: "custom.event",
+      payload: "plain text",
+    });
+    expect(toGbxCallback(method, ["empty", ""])).toEqual({
+      name: "empty",
+      payload: {},
+    });
+    expect(toGbxCallback(method, ["broken", ["{oops"]])).toEqual({
+      name: "broken",
+      payload: "{oops",
+    });
+  });
+});
 
 describe("parseCallback", () => {
   it("maps plain ManiaPlanet callbacks", () => {
-    expect(parseCallback("ManiaPlanet.PlayerConnect", ["login", false])).toEqual({
+    expect(
+      parseCallback("ManiaPlanet.PlayerConnect", ["login", false]),
+    ).toEqual({
       type: "playerConnect",
       login: "login",
     });
-    expect(parseCallback("ManiaPlanet.BeginMatch", [])).toEqual({ type: "beginMatch" });
+    expect(parseCallback("ManiaPlanet.BeginMatch", [])).toEqual({
+      type: "beginMatch",
+    });
     expect(parseCallback("ManiaPlanet.Echo", ["UpdatedSettings", ""])).toEqual({
       type: "echo",
       internal: "UpdatedSettings",
@@ -16,12 +57,25 @@ describe("parseCallback", () => {
   });
 
   it("names positional chat and manialink arguments", () => {
-    expect(parseCallback("ManiaPlanet.PlayerChat", [3, "abc", "/help", true, 0])).toEqual({
+    expect(
+      parseCallback("ManiaPlanet.PlayerChat", [3, "abc", "/help", true, 0]),
+    ).toEqual({
       type: "playerChat",
-      chat: { PlayerUid: 3, Login: "abc", Text: "/help", IsRegistredCmd: true, Options: 0 },
+      chat: {
+        PlayerUid: 3,
+        Login: "abc",
+        Text: "/help",
+        IsRegistredCmd: true,
+        Options: 0,
+      },
     });
     expect(
-      parseCallback("ManiaPlanet.PlayerManialinkPageAnswer", [3, "abc", "action", undefined]),
+      parseCallback("ManiaPlanet.PlayerManialinkPageAnswer", [
+        3,
+        "abc",
+        "action",
+        undefined,
+      ]),
     ).toEqual({
       type: "manialinkAnswer",
       answer: { PlayerUid: 3, Login: "abc", Answer: "action", Entries: [] },
@@ -41,21 +95,32 @@ describe("parseCallback", () => {
 
   it("handles payload-less script callbacks", () => {
     expect(
-      parseCallback("ManiaPlanet.ModeScriptCallbackArray", ["Maniaplanet.StartRound_Start", []]),
+      parseCallback("ManiaPlanet.ModeScriptCallbackArray", [
+        "Maniaplanet.StartRound_Start",
+        [],
+      ]),
     ).toEqual({ type: "startRoundStart" });
   });
 
   it("ignores unknown callbacks", () => {
-    expect(parseCallback("ManiaPlanet.StatusChanged", [4, "Running"])).toBeNull();
     expect(
-      parseCallback("ManiaPlanet.ModeScriptCallbackArray", ["Some.Custom.Event", ["{}"]]),
+      parseCallback("ManiaPlanet.StatusChanged", [4, "Running"]),
+    ).toBeNull();
+    expect(
+      parseCallback("ManiaPlanet.ModeScriptCallbackArray", [
+        "Some.Custom.Event",
+        ["{}"],
+      ]),
     ).toBeNull();
     expect(parseCallback("ManiaPlanet.ModeScriptCallbackArray", [])).toBeNull();
   });
 
   it("throws on malformed JSON so the runtime can log it", () => {
     expect(() =>
-      parseCallback("ManiaPlanet.ModeScriptCallbackArray", ["Trackmania.Scores", ["{oops"]]),
+      parseCallback("ManiaPlanet.ModeScriptCallbackArray", [
+        "Trackmania.Scores",
+        ["{oops"],
+      ]),
     ).toThrow();
   });
 });

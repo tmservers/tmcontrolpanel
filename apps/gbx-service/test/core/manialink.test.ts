@@ -1,3 +1,4 @@
+import { buildTable } from "@tmcontrolpanel/plugin-sdk";
 import { DEFAULT_THEME } from "@tmcontrolpanel/shared";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -12,7 +13,6 @@ import { flush } from "../fakes/clock";
 import { FakeGbxSession } from "../fakes/fake-gbx";
 import { testRenderer } from "../fakes/harness";
 import { silentLogger } from "../fakes/logger";
-
 
 const TEMPLATES_DIR = fileURLToPath(
   new URL("../../templates", import.meta.url),
@@ -44,10 +44,16 @@ describe("TemplateRenderer", () => {
   });
 
   it("passes the theme to every template", () => {
-    const page = '<q bg="{{ @theme.quad.background }}" fg="{{ @theme.label.foreground }}"/>';
-    expect(new TemplateRenderer({ page }).render("page", {})).toBe('<q bg="222" fg="DDD"/>');
-    const loop = "{{#each items}}{{ @theme.quad.foregroundMuted }}{{ @theme.label.foregroundMuted }}{{/each}}";
-    expect(new TemplateRenderer({ loop }).render("loop", { items: [1, 2] })).toBe("CCCCCCCCCCCC");
+    const page =
+      '<q bg="{{ @theme.quad.background }}" fg="{{ @theme.label.foreground }}"/>';
+    expect(new TemplateRenderer({ page }).render("page", {})).toBe(
+      '<q bg="222" fg="DDD"/>',
+    );
+    const loop =
+      "{{#each items}}{{ @theme.quad.foregroundMuted }}{{ @theme.label.foregroundMuted }}{{/each}}";
+    expect(
+      new TemplateRenderer({ loop }).render("loop", { items: [1, 2] }),
+    ).toBe("CCCCCCCCCCCC");
     const light = {
       quad: { ...DEFAULT_THEME.quad, background: "EEE" },
       label: { ...DEFAULT_THEME.label, foreground: "111" },
@@ -71,6 +77,28 @@ describe("TemplateRenderer", () => {
       size: { x: 50, y: 40 },
       title: "Title",
       hideWhileDriving: true,
+      // components/table reads these hash params from its context
+      table: buildTable({
+        columns: [
+          { title: "Name", width: 30, key: "name" },
+          {
+            title: "Score",
+            width: 10,
+            align: "right",
+            key: "score",
+            color: (row) => (row.score > 5 ? "F60" : null),
+          },
+        ],
+        rows: [
+          { name: "One", score: 3 },
+          { name: "Two", score: 9 },
+          { name: "Three", score: 1 },
+        ],
+        page: 1,
+        pageSize: 2,
+      }),
+      prev: "prev",
+      next: "next",
       data: {
         actions: [{ name: "a", icon: "x", action: "act", type: "image" }],
         positionsAvailable: [1, 2],
@@ -178,7 +206,7 @@ describe("components", () => {
   });
 
   it("action group hides itself when the last action is removed", () => {
-    const { deps, manialinks } = setup();
+    const { gbx, deps, manialinks } = setup();
     const group = new ActionGroup(deps);
     group.add({ name: "ecm", icon: "x" });
     expect(manialinks.displayedIds()).toEqual(["action-group-widget"]);
@@ -186,5 +214,42 @@ describe("components", () => {
     group.remove("ecm");
     expect(group.list()).toEqual([]);
     expect(manialinks.displayedIds()).toEqual([]);
+  });
+
+  it("shows admin-only actions only on connected admins' personal pages", () => {
+    const { gbx, deps, manialinks } = setup();
+    const group = new ActionGroup(deps);
+    group.add({ name: "public", icon: "p" });
+    group.setAdmins(["admin"]);
+    expect(manialinks.displayedIds()).toEqual(["action-group-widget"]);
+    group.add({ name: "private", icon: "a", adminOnly: true });
+    const publicXml = gbx.sent
+      .filter((s) => s.method === "SendDisplayManialinkPage")
+      .map((s) => String(s.params[0]))
+      .find((xml) => xml.includes("<script"));
+    const personalXml = gbx.sent
+      .filter((s) => s.method === "SendDisplayManialinkPageToLogin")
+      .map((s) => String(s.params[1]))
+      .find((xml) => xml.includes("<script"));
+    expect(String(publicXml)).toContain('text="p"');
+    expect(String(publicXml)).not.toContain('text="a"');
+    expect(String(personalXml)).toContain('text="a"');
+    expect(manialinks.displayedIds()).toEqual(["action-group-widget"]);
+    expect(manialinks.displayedIds("admin")).toEqual(["action-group-widget"]);
+    expect(manialinks.displayedIds("other")).toEqual([]);
+    group.setAdmins([]);
+    expect(manialinks.displayedIds("admin")).toEqual([]);
+    group.remove("private");
+    group.setAdmins(["admin"]);
+    expect(manialinks.displayedIds("admin")).toEqual([]);
+  });
+
+  it("does not rerender when admins change without admin-only actions", () => {
+    const { gbx, deps } = setup();
+    const group = new ActionGroup(deps);
+    group.add({ name: "public", icon: "p" });
+    gbx.sent.length = 0;
+    group.setAdmins(["admin"]);
+    expect(gbx.sent).toHaveLength(0);
   });
 });

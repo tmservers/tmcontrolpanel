@@ -1,6 +1,6 @@
 "use client";
 
-import { addTmeventsMaps, disconnectTmevents } from "@/actions/tmevents";
+import { addTmeventsMaps } from "@/actions/tmevents";
 import { TmText } from "@/components/tm-text";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  useTmeventsConnection,
   useTmeventsEventData,
   useTmeventsEvents,
   useTmeventsStatus,
@@ -33,7 +34,7 @@ import { getErrorMessage } from "@/lib/utils";
 import { IconCalendarEvent, IconDownload, IconLink } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { PluginConfig, TmeventsImportPaths } from "@tmcontrolpanel/shared";
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import { toast } from "sonner";
 
 const EVENT_SEQUENCE = "event";
@@ -71,39 +72,12 @@ export function TmeventsImport({
   const events = useTmeventsEvents(connected);
   const event = useTmeventsEventData(connected ? eventId : "");
 
-  // The sign-in popup reports back when it is done
-  useEffect(() => {
-    if (!open) return;
-    function onMessage(message: MessageEvent) {
-      if (
-        message.origin !== window.location.origin ||
-        message.data?.type !== "tmevents"
-      )
-        return;
-      if (message.data.outcome === "connected")
-        void queryClient.invalidateQueries({
-          queryKey: queryKeys.tmeventsStatus(),
-        });
-      else toast.error("Trackmania Events was not connected");
-    }
-    window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
-  }, [open, queryClient]);
+  const connection = useTmeventsConnection();
 
   if (!status.data?.configured) return null;
 
   async function disconnect() {
-    const { error } = await disconnectTmevents();
-    if (error) {
-      toast.error("Failed to disconnect Trackmania Events", {
-        description: error,
-      });
-      return;
-    }
-    setEventId("");
-    await queryClient.invalidateQueries({
-      queryKey: queryKeys.tmeventsStatus(),
-    });
+    if (await connection.disconnect()) setEventId("");
   }
 
   const data = event.data;
@@ -235,6 +209,7 @@ export function TmeventsImport({
                   type="button"
                   variant="ghost"
                   size="sm"
+                  disabled={connection.disconnecting}
                   onClick={() => void disconnect()}
                 >
                   Disconnect
@@ -383,16 +358,7 @@ export function TmeventsImport({
                 Connect your Trackmania Events account and choose which events
                 this panel may read.
               </p>
-              <Button
-                type="button"
-                onClick={() =>
-                  window.open(
-                    "/api/tmevents/authorize",
-                    "tmevents",
-                    "popup,width=600,height=760",
-                  )
-                }
-              >
+              <Button type="button" onClick={connection.connect}>
                 <IconLink />
                 Connect Trackmania Events
               </Button>

@@ -16,12 +16,13 @@ import {
 } from "@/components/ui/select";
 import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useDisplayNames } from "@/hooks/use-display-names";
 import { useQueryErrorToast } from "@/hooks/use-query-error-toast";
 import { useSearchUsers } from "@/hooks/use-search-users";
 import { getScripts } from "@/lib/api-client/filemanager";
 import { getLocalMaps } from "@/lib/api-client/gbx";
 import { queryKeys, unwrap } from "@/lib/api-client/query";
-import { getErrorMessage } from "@/lib/utils";
+import { capitalize, getErrorMessage } from "@/lib/utils";
 import { Root as Tabs } from "@radix-ui/react-tabs";
 import {
   IconDeviceFloppy,
@@ -39,7 +40,7 @@ import {
 } from "@tmcontrolpanel/shared";
 import { useSession } from "next-auth/react";
 import Papa from "papaparse";
-import { useId, useRef, useState } from "react";
+import { createContext, useContext, useId, useRef, useState } from "react";
 import { toast } from "sonner";
 import { TmeventsImport } from "./tmevents-import";
 
@@ -79,6 +80,26 @@ function hasWidget(field: ConfigField, widget: string): boolean {
   return field.type === "string" && field.widget === widget;
 }
 
+// Nadeo display names of the logins in the form, for players without a panel account
+const DisplayNames = createContext<Record<string, string>>({});
+
+// Every value of a user widget anywhere in the form, nested lists included
+function userLogins(field: ConfigField, value: unknown): string[] {
+  if (field.type === "string")
+    return field.widget === "user" && typeof value === "string" && value
+      ? [value]
+      : [];
+  if (field.type === "array")
+    return Array.isArray(value)
+      ? value.flatMap((item) => userLogins(field.items, item))
+      : [];
+  if (field.type === "object" && value && typeof value === "object")
+    return Object.entries(field.properties).flatMap(([key, child]) =>
+      userLogins(child, (value as PluginConfig)[key]),
+    );
+  return [];
+}
+
 function UserField({
   value,
   onChange,
@@ -92,6 +113,13 @@ function UserField({
     defaultUsers: value ? [value] : [],
     field: "login",
   });
+  const names = useContext(DisplayNames);
+  const results = searchResults.map((user) => ({
+    label: user.nickName,
+    value: user.login,
+  }));
+  if (value && names[value] && !results.some((user) => user.value === value))
+    results.push({ label: names[value], value });
   return (
     <SearchInput
       id={id}
@@ -99,10 +127,7 @@ function UserField({
       onValueChange={onChange}
       onSearch={search}
       loading={loading}
-      searchResults={searchResults.map((user) => ({
-        label: user.nickName,
-        value: user.login,
-      }))}
+      searchResults={results}
     />
   );
 }
@@ -136,6 +161,7 @@ export function PluginConfigForm({
   const [cleared, setCleared] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const displayNames = useDisplayNames(userLogins(schema, values));
   const mapsQuery = useQuery({
     queryKey: queryKeys.localMaps(serverId ?? ""),
     queryFn: () => unwrap(getLocalMaps(serverId!), "GetLocalMapsError"),
@@ -548,7 +574,10 @@ export function PluginConfigForm({
       (field.enum || field.widget === "map" || field.widget === "script")
     ) {
       const options =
-        field.enum?.map((option) => ({ label: option, value: option })) ??
+        field.enum?.map((option) => ({
+          label: capitalize(option),
+          value: option,
+        })) ??
         (field.widget === "map"
           ? maps.map((map) => ({
               label: map.Name,
@@ -697,82 +726,87 @@ export function PluginConfigForm({
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4">
-      {schema.tmevents && (
-        <TmeventsImport
-          serverId={serverId}
-          paths={schema.tmevents}
-          values={values}
-          localMaps={maps}
-          onImport={importTmevents}
-        />
-      )}
-      {schema.tabs ? (
-        <Tabs
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="flex flex-col gap-4"
-        >
-          <TabsList className="w-full" aria-label="Plugin settings sections">
-            {schema.tabs.map((tab) => (
-              <TabsTrigger key={tab.id} value={tab.id}>
-                {tab.title}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-          {schema.tabs.map((tab) => (
-            <TabsContent
-              key={tab.id}
-              value={tab.id}
-              className="flex flex-col gap-4"
-            >
-              {renderObject(
-                {
-                  ...schema,
-                  properties: Object.fromEntries(
-                    tab.properties.map((key) => [key, schema.properties[key]]),
-                  ),
-                },
-                values,
-                [],
-              )}
-            </TabsContent>
-          ))}
-        </Tabs>
-      ) : (
-        renderObject(schema, values, [])
-      )}
-      <div className="flex flex-wrap justify-between gap-2">
-        <Button type="button" variant="outline" onClick={onClose}>
-          <IconX />
-          Close
-        </Button>
-        <div className="flex flex-wrap gap-2">
-          {onExport && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => void onExport()}
-            >
-              <IconDownload />
-              Export Config
-            </Button>
-          )}
-          <FileUploadButton
-            accept=".json"
-            onChange={(event) => {
-              void importConfig(event.target.files?.[0]);
-              event.target.value = "";
-            }}
+    <DisplayNames.Provider value={displayNames.data ?? {}}>
+      <form onSubmit={submit} className="flex flex-col gap-4">
+        {schema.tmevents && (
+          <TmeventsImport
+            serverId={serverId}
+            paths={schema.tmevents}
+            values={values}
+            localMaps={maps}
+            onImport={importTmevents}
+          />
+        )}
+        {schema.tabs ? (
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="flex flex-col gap-4"
           >
-            Import Config
-          </FileUploadButton>
-          <Button type="submit" disabled={saving}>
-            <IconDeviceFloppy />
-            Save
+            <TabsList className="w-full" aria-label="Plugin settings sections">
+              {schema.tabs.map((tab) => (
+                <TabsTrigger key={tab.id} value={tab.id}>
+                  {tab.title}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {schema.tabs.map((tab) => (
+              <TabsContent
+                key={tab.id}
+                value={tab.id}
+                className="flex flex-col gap-4"
+              >
+                {renderObject(
+                  {
+                    ...schema,
+                    properties: Object.fromEntries(
+                      tab.properties.map((key) => [
+                        key,
+                        schema.properties[key],
+                      ]),
+                    ),
+                  },
+                  values,
+                  [],
+                )}
+              </TabsContent>
+            ))}
+          </Tabs>
+        ) : (
+          renderObject(schema, values, [])
+        )}
+        <div className="flex flex-wrap justify-between gap-2">
+          <Button type="button" variant="outline" onClick={onClose}>
+            <IconX />
+            Close
           </Button>
+          <div className="flex flex-wrap gap-2">
+            {onExport && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void onExport()}
+              >
+                <IconDownload />
+                Export Config
+              </Button>
+            )}
+            <FileUploadButton
+              accept=".json"
+              onChange={(event) => {
+                void importConfig(event.target.files?.[0]);
+                event.target.value = "";
+              }}
+            >
+              Import Config
+            </FileUploadButton>
+            <Button type="submit" disabled={saving}>
+              <IconDeviceFloppy />
+              Save
+            </Button>
+          </div>
         </div>
-      </div>
-    </form>
+      </form>
+    </DisplayNames.Provider>
   );
 }

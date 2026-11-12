@@ -11,15 +11,10 @@ export default async function AdminCodriverPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="flex items-center gap-2 text-2xl font-bold">
-          Codriver <Badge variant="outline">Experimental</Badge>
-        </h1>
-        <h4 className="text-muted-foreground">
-          The experimental AI assistant for your game servers: turn it on, store
-          the shared API key, set budgets and decide who may use it.
-        </h4>
-      </div>
+      <p className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Badge variant="outline">Experimental</Badge>
+        Codriver can make mistakes.
+      </p>
       <PanelCodriver />
     </div>
   );

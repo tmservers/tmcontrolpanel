@@ -1,6 +1,11 @@
 "use client";
 
-import { IconBell, IconDotsVertical, IconLogout } from "@tabler/icons-react";
+import {
+  IconBell,
+  IconDotsVertical,
+  IconLogout,
+  IconSettings,
+} from "@tabler/icons-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -21,6 +26,7 @@ import {
 import { useNotifications } from "@/providers/notification-provider";
 import { routes } from "@/routes";
 import { signOut, useSession } from "next-auth/react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ThemeToggle } from "../theme-toggle";
 import { NotificationsList } from "./notifications-list";
@@ -102,6 +108,12 @@ export function SiteUser() {
             <NotificationsList />
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
+              <DropdownMenuItem asChild>
+                <Link href={routes.settings}>
+                  <IconSettings />
+                  Settings
+                </Link>
+              </DropdownMenuItem>
               <ThemeToggle />
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

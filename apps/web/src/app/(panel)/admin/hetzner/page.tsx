@@ -15,15 +15,6 @@ export default async function AdminHetznerPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex gap-2 justify-between sm:items-end">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold">Manage Hetzner Projects</h1>
-          <h4 className="text-muted-foreground">
-            Manage your Hetzner projects and cloud servers.
-          </h4>
-        </div>
-      </div>
-
       <PaginationTable
         endpoint="/api/hetzner/projects"
         createColumns={createColumns}

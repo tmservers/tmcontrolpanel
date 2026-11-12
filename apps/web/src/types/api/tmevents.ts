@@ -18,12 +18,18 @@ export interface TmeventsEvent {
   teamBased: boolean;
 }
 
-export interface TmeventsPlayer {
+// Shown while seeding; the import itself doesn't copy these
+export interface TmeventsRanked {
+  seed?: number | null;
+  averagePosition?: number | null;
+}
+
+export interface TmeventsPlayer extends TmeventsRanked {
   login: string;
   name: string;
 }
 
-export interface TmeventsTeam {
+export interface TmeventsTeam extends TmeventsRanked {
   name: string;
   players: TmeventsPlayer[];
 }
@@ -46,7 +52,7 @@ export interface TmeventsPreset {
 
 export interface TmeventsEventData {
   event: TmeventsEvent;
-  // In the order Trackmania Events returns them, which the import uses as seeding
+  // In seeding order: organiser seeds, then the event ranking
   teams: TmeventsTeam[];
   players: TmeventsPlayer[];
   tracks: TmeventsTrack[];

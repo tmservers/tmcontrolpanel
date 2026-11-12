@@ -88,14 +88,6 @@ export default async function ServerGamePage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold">Manage Game</h1>
-        <h4 className="text-muted-foreground">
-          Manage general game settings, including map rotation, script settings
-          and gamemodes.
-        </h4>
-      </div>
-
       <Tabs defaultValue="map" className="w-full">
         <TabsList className="w-full">
           <TabsTrigger value="map">Map Rotation</TabsTrigger>

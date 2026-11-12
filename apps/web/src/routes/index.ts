@@ -34,6 +34,7 @@ export const routes = {
     detail: "/plugins/:slug",
   },
   apiDocs: "/api/v1/docs",
+  settings: "/settings",
   login: "/login",
 };
 
@@ -460,6 +461,14 @@ export const breadCrumbs: {
       },
       {
         label: "API Keys",
+      },
+    ],
+  },
+  {
+    path: routes.settings,
+    breadCrumbs: [
+      {
+        label: "Settings",
       },
     ],
   },

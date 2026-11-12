@@ -15,15 +15,6 @@ export default async function AdminRolesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex gap-2 justify-between sm:items-end">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold">Manage Roles</h1>
-          <h4 className="text-muted-foreground">
-            Manage the roles and their permissions.
-          </h4>
-        </div>
-      </div>
-
       <PaginationTable
         createColumns={createColumns}
         endpoint="/api/roles"

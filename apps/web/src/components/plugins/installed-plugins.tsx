@@ -214,7 +214,7 @@ function InstalledPluginCard({
   return (
     <Card className="flex flex-col gap-3 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-start gap-3">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
           <Checkbox
             className="mt-1"
             checked={plugin.enabled}
@@ -222,7 +222,7 @@ function InstalledPluginCard({
             onCheckedChange={(checked) => toggle(checked === true)}
             aria-label={`Turn ${plugin.name} on or off`}
           />
-          <div className="flex flex-col gap-1">
+          <div className="flex min-w-0 flex-col gap-1">
             <div className="flex flex-wrap items-center gap-2">
               {plugin.source === "marketplace" && !plugin.firstParty ? (
                 <Link
@@ -255,7 +255,7 @@ function InstalledPluginCard({
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2 sm:flex-nowrap sm:justify-end">
           {plugin.update && (
             <InstallDialog
               name={plugin.name}
@@ -521,8 +521,8 @@ export default function InstalledPlugins({
       aria-labelledby="installed-plugins-title"
       className="flex flex-col gap-4"
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+        <div className="flex min-w-0 flex-col gap-1">
           <h2 id="installed-plugins-title" className="text-lg font-semibold">
             Plugins
           </h2>
@@ -531,7 +531,7 @@ export default function InstalledPlugins({
             plugin that misbehaves is turned off and the admins are notified.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 xl:shrink-0 xl:justify-end">
           {updatable > 0 && (
             <UpdateAllButton serverId={serverId} count={updatable} />
           )}

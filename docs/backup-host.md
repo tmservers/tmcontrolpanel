@@ -80,6 +80,7 @@ Set these values for the new node:
 - `IMAGE_TAG`: the same release tag as the primary. Use `IMAGE_SUFFIX=-postgres` for PostgreSQL images; leave it empty for MariaDB/MySQL. Both services must use the same flavour.
 - `NEXTAUTH_URL`: the public HTTPS panel URL. Prefer one stable panel domain routed to either host.
 - `NADEO_REDIRECT_URI`: that panel URL followed by `/api/auth/callback/nadeo`. Register the exact callback with Nadeo. Register any separate host domains used for sign-in too.
+- `TMEVENTS_CLIENT_ID`, `TMEVENTS_CLIENT_SECRET` and `TMEVENTS_REDIRECT_URI` (optional): the Trackmania Events app for plugin imports, with the same credentials as the primary. The redirect URI is the panel URL followed by `/api/auth/callback/tmevents`; register it with Trackmania Events.
 - `GBX_SERVICE_WS_URL`: the public `wss://` endpoint reachable from browsers.
 - `WS_ALLOWED_ORIGINS`: all allowed panel origins, comma separated, on both nodes.
 - `GBX_SERVICE_ENABLED_SERVERS`: empty allows every server. If set, the backup can only take over the listed server IDs.
@@ -113,7 +114,7 @@ The web container runs `prisma migrate deploy` on startup. Prisma's database adv
 3. Set `GBX_NODE_ID=node-b`, the worker count, lease TTL, image tag and flavour. Set a unique `STACK_NAME` such as `node-b` so proxy aliases do not collide.
 4. The file follows `docker-compose.coolify.yml` and uses the external NPM network. Set `NPM_NETWORK` to an existing proxy network on this host (default `nginxproxymanager_default`). Attach the proxy to it before deploying.
 5. Assign real HTTPS domains to both services. Coolify's `SERVICE_URL_*` variables generate domain settings only. All shared secrets are required plain variables; no `SERVICE_PASSWORD_*` variables generate replacement secrets in this file.
-6. Coolify supplies `NEXTAUTH_URL`, the callback URL and default WSS URL from the assigned domains. For a stable shared WSS endpoint, set `GBX_SERVICE_WS_URL` explicitly. Set `WS_ALLOWED_ORIGINS` to include the stable public panel origin and any host-specific panel origins on both nodes. Register the resulting callback URLs with Nadeo. Set `PANEL_PUBLIC_URL` to the shared panel domain to use it for both instead.
+6. Coolify supplies `NEXTAUTH_URL`, the callback URL and default WSS URL from the assigned domains. For a stable shared WSS endpoint, set `GBX_SERVICE_WS_URL` explicitly. Set `WS_ALLOWED_ORIGINS` to include the stable public panel origin and any host-specific panel origins on both nodes. Register the resulting callback URLs with Nadeo, and the `/api/auth/callback/tmevents` ones with Trackmania Events when you set `TMEVENTS_CLIENT_ID` and `TMEVENTS_CLIENT_SECRET`. Set `PANEL_PUBLIC_URL` to the shared panel domain to use it for both instead.
 7. Deploy, inspect the logs and run the checks below. Proxy to `tmcontrolpanel-node-b:3000` and `gbx-service-node-b:3100` on the NPM network. Keep GBX `/internal/*` private and enable WebSocket upgrades.
 
 Do not recreate or rotate the primary's generated secrets while adding the node.

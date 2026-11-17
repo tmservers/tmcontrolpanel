@@ -6,25 +6,22 @@ import { getClient } from "@/lib/dbclient";
 import { publishServerEvent } from "@/lib/gbx-service";
 import { ServerError, ServerResponse } from "@/types/responses";
 import { Prisma } from "@tmcontrolpanel/db";
-import {
-  type ManialinkTheme,
-  manialinkThemeSchema,
-} from "@tmcontrolpanel/shared";
+import { themeSettingSchema } from "@tmcontrolpanel/shared";
 import { logAudit } from "./server-only/audit-logs";
 import { groupServerIds, publishThemeChange } from "./server-only/themes";
 
-function parseInput(theme: ManialinkTheme | null) {
+function parseInput(theme: unknown) {
   if (theme === null) return Prisma.DbNull;
-  const result = manialinkThemeSchema.safeParse(theme);
+  const result = themeSettingSchema.safeParse(theme);
   if (!result.success)
-    throw new ServerError("Colors must be three hex digits", "InvalidTheme");
+    throw new ServerError("Invalid theme preset", "InvalidTheme");
   return result.data;
 }
 
 // null removes the server's own theme, so it uses its group's or the default again
 export async function updateServerTheme(
   serverId: string,
-  theme: ManialinkTheme | null,
+  theme: { preset: string } | null,
 ): Promise<ServerResponse> {
   assertResourceId(serverId);
   return doServerActionWithAuth(
@@ -47,7 +44,7 @@ export async function updateServerTheme(
 
 export async function updateGroupTheme(
   groupId: string,
-  theme: ManialinkTheme | null,
+  theme: { preset: string } | null,
 ): Promise<ServerResponse> {
   assertResourceId(groupId);
   return doServerActionWithAuth(

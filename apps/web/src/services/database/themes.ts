@@ -1,18 +1,14 @@
 import { doServerActionWithAuth } from "@/lib/actions";
 import { getClient } from "@/lib/dbclient";
 import { ServerError, ServerResponse } from "@/types/responses";
-import {
-  DEFAULT_THEME,
-  type ManialinkTheme,
-  parseTheme,
-} from "@tmcontrolpanel/shared";
+import { DEFAULT_PRESET_ID, parseThemeSetting } from "@tmcontrolpanel/shared";
 import "server-only";
 
 export interface ServerThemeOverview {
   // The server's own theme; null when it uses the inherited one
-  theme: ManialinkTheme | null;
-  // What the server shows without its own theme
-  inherited: ManialinkTheme;
+  theme: string | null;
+  // Effective inherited preset
+  inherited: string;
   // Group the inherited theme comes from; null for the default
   inheritedFrom: string | null;
 }
@@ -41,12 +37,13 @@ export async function getServerTheme(
       const group = server.groupServers
         .map((gs) => gs.group)
         .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
-        .map((g) => ({ name: g.name, theme: parseTheme(g.theme) }))
+        .map((g) => ({ name: g.name, theme: parseThemeSetting(g.theme) }))
         .find((g) => g.theme);
+      const serverTheme = parseThemeSetting(server.theme);
 
       return {
-        theme: parseTheme(server.theme),
-        inherited: group?.theme ?? DEFAULT_THEME,
+        theme: serverTheme,
+        inherited: group?.theme ?? DEFAULT_PRESET_ID,
         inheritedFrom: group?.name ?? null,
       };
     },

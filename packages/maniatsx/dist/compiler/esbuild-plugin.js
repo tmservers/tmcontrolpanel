@@ -9,7 +9,7 @@ export function maniatsxEsbuildPlugin(options = {}) {
             build.onLoad({ filter: /\.[cm]?tsx?$/ }, async ({ path: file }) => {
                 const source = await readFile(file, "utf8");
                 const loader = file.endsWith("x") ? "tsx" : "ts";
-                const result = compilePluginLoad(file, source, rootDir);
+                const result = compilePluginLoad(file, source, rootDir, options.keyPrefix);
                 if (!result)
                     return { contents: source, loader };
                 const messages = (severity) => result.diagnostics

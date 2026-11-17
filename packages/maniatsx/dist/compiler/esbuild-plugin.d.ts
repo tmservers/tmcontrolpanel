@@ -22,6 +22,7 @@ interface EsbuildBuild {
 }
 export interface EsbuildPluginOptions {
     rootDir?: string;
+    keyPrefix?: string;
     tsconfigPath?: string;
 }
 export interface EsbuildPlugin {

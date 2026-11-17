@@ -52,6 +52,7 @@ export interface ClientState<T = unknown> {
     readonly site: SourceSite;
     readonly persist?: {
         readonly key?: string;
+        readonly keyPrefix?: string;
     };
     value: T;
 }
@@ -67,6 +68,8 @@ export interface ClientShared<T = unknown> {
 export interface ClientStateOptions {
     persist?: boolean;
     key?: string;
+    /** @internal compiler-only namespace for persisted storage names */
+    keyPrefix?: string;
 }
 export interface ClientRef<T = unknown> {
     readonly $$typeof: typeof CLIENT;

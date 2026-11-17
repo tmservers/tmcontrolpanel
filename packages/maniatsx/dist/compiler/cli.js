@@ -1,12 +1,13 @@
 import path from "node:path";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { compileProject } from "./index.js";
-const usage = "Usage: maniatsx-compile --project <tsconfig.json> --out <dir> [--check] [--all]";
+const usage = "Usage: maniatsx-compile --project <tsconfig.json> --out <dir> [--key-prefix <p>] [--check] [--all]";
 export async function main(args) {
     let project;
     let out;
     let check = false;
     let all = false;
+    let keyPrefix;
     for (let i = 0; i < args.length; i++) {
         const arg = args[i];
         if (arg === "--help") {
@@ -17,14 +18,16 @@ export async function main(args) {
             check = true;
         else if (arg === "--all")
             all = true;
-        else if (arg === "--project" || arg === "--out") {
+        else if (arg === "--project" || arg === "--out" || arg === "--key-prefix") {
             const value = args[++i];
             if (!value || value.startsWith("--"))
                 throw new Error(`${arg} requires a value`);
             if (arg === "--project")
                 project = value;
-            else
+            else if (arg === "--out")
                 out = value;
+            else
+                keyPrefix = value;
         }
         else
             throw new Error(`Unknown argument: ${arg}`);
@@ -32,7 +35,7 @@ export async function main(args) {
     if (!project || !out)
         throw new Error(usage);
     const root = path.dirname(path.resolve(project));
-    const result = compileProject({ tsconfigPath: path.resolve(project) });
+    const result = compileProject({ tsconfigPath: path.resolve(project), keyPrefix });
     for (const d of result.diagnostics)
         console.error(`${d.file}:${d.line}:${d.column} ${d.severity} ${d.message}`);
     if (result.diagnostics.some((d) => d.severity === "error"))

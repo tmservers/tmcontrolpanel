@@ -3,12 +3,14 @@ import { type CompileDiagnostic } from "./util.js";
 export type { CompileDiagnostic } from "./util.js";
 export declare function compileSource(fileName: string, sourceText: string, opts?: {
     rootDir?: string;
+    keyPrefix?: string;
 }): {
     code: string;
     diagnostics: CompileDiagnostic[];
 };
-export declare function compileProject({ tsconfigPath }: {
+export declare function compileProject({ tsconfigPath, keyPrefix, }: {
     tsconfigPath: string;
+    keyPrefix?: string;
 }): {
     files: Map<string, string>;
     diagnostics: CompileDiagnostic[];

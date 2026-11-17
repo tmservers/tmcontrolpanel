@@ -5,7 +5,10 @@ import { Lowerer } from "./lower.js";
 import { toMs } from "./ty.js";
 import { joinItems } from "./util.js";
 // Sites are relative to root so builds are reproducible across machines
-function transform(program, files, root) {
+function prefixedKey(key, prefix) {
+    return prefix ? `${prefix}_${key}`.replace(/\W/g, "") : key;
+}
+function transform(program, files, root, keyPrefix) {
     const diagnostics = [];
     const analyzer = new Analyzer(program, program.getTypeChecker(), {
         report(node, code, message, severity = "error") {
@@ -56,7 +59,7 @@ function transform(program, files, root) {
                         const type = toMs(analyzer.stateArgTy(node, node));
                         const options = stateOptions(analyzer, node.arguments[1]);
                         if (type && options !== null)
-                            replacement = `__mtx.state(${JSON.stringify(type)}, ${descriptor([{ kind: "value", type, expr: arg.getText(file) }])}, ${JSON.stringify(site)}${options ? `, ${JSON.stringify(options)}` : ""})`;
+                            replacement = `__mtx.state(${JSON.stringify(type)}, ${descriptor([{ kind: "value", type, expr: arg.getText(file) }])}, ${JSON.stringify(site)}${options || keyPrefix ? `, ${JSON.stringify({ ...options, ...(keyPrefix && options?.persist && { keyPrefix }) })}` : ""})`;
                     }
                     else if (kind === "shared") {
                         const key = arg && unparen(arg);
@@ -74,7 +77,7 @@ function transform(program, files, root) {
                             });
                             const type = msWithFields(analyzer, tracked.result);
                             if (type)
-                                replacement = `__mtx.shared(${JSON.stringify(key.text)}, ${JSON.stringify(type)}, ${descriptor([{ kind: "value", type, expr: node.arguments[1].getText(file) }], tracked.structs)}, ${JSON.stringify(site)})`;
+                                replacement = `__mtx.shared(${JSON.stringify(prefixedKey(key.text, keyPrefix))}, ${JSON.stringify(type)}, ${descriptor([{ kind: "value", type, expr: node.arguments[1].getText(file) }], tracked.structs)}, ${JSON.stringify(site)})`;
                             else
                                 analyzer.report(node, "shared-type", "This client.shared type cannot be written as a ManiaScript literal.");
                         }
@@ -219,6 +222,7 @@ function stateOptions(analyzer, node) {
     return persist ? { persist: true, ...(key !== undefined && { key }) } : undefined;
 }
 export function compileSource(fileName, sourceText, opts = {}) {
+    const keyPrefix = opts.keyPrefix;
     const root = path.resolve(opts.rootDir ?? process.cwd());
     const name = path.resolve(root, fileName);
     try {
@@ -241,7 +245,9 @@ export function compileSource(fileName, sourceText, opts = {}) {
         host.readFile = (f) => (path.resolve(f) === name ? sourceText : read(f));
         host.fileExists = (f) => path.resolve(f) === name || exists(f);
         const program = ts.createProgram([name], options, host);
-        const result = transform(program, [program.getSourceFile(name)], root);
+        if (keyPrefix !== undefined && !/^[A-Za-z0-9._-]+$/.test(keyPrefix))
+            throw new Error("keyPrefix must be non-empty and contain only letters, digits, '.', '-' or '_'.");
+        const result = transform(program, [program.getSourceFile(name)], root, keyPrefix);
         return { code: result.output.get(name), diagnostics: result.diagnostics };
     }
     catch (error) {
@@ -260,13 +266,15 @@ export function compileSource(fileName, sourceText, opts = {}) {
         };
     }
 }
-export function compileProject({ tsconfigPath }) {
+export function compileProject({ tsconfigPath, keyPrefix, }) {
     const config = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
     if (config.error)
         throw new Error(ts.flattenDiagnosticMessageText(config.error.messageText, "\n"));
     const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, path.dirname(path.resolve(tsconfigPath)));
     const program = ts.createProgram(parsed.fileNames, parsed.options);
-    const result = transform(program, parsed.fileNames.map((f) => program.getSourceFile(f)).filter((f) => !!f), path.dirname(path.resolve(tsconfigPath)));
+    if (keyPrefix !== undefined && !/^[A-Za-z0-9._-]+$/.test(keyPrefix))
+        throw new Error("keyPrefix must be non-empty and contain only letters, digits, '.', '-' or '_'.");
+    const result = transform(program, parsed.fileNames.map((f) => program.getSourceFile(f)).filter((f) => !!f), path.dirname(path.resolve(tsconfigPath)), keyPrefix);
     return { files: result.output, diagnostics: result.diagnostics };
 }
 export function debugEmit(code, values = []) {

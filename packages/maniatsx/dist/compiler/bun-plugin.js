@@ -10,7 +10,7 @@ export function maniatsxPlugin(opts = {}) {
                 const loader = file.endsWith("x") ? "tsx" : "ts";
                 // Runtime plugins (Bun.plugin) must always return contents, so untouched files pass through as-is
                 const untouched = { contents: source, loader };
-                const result = compilePluginLoad(file, source, rootDir);
+                const result = compilePluginLoad(file, source, rootDir, opts.keyPrefix);
                 if (!result)
                     return untouched;
                 for (const warning of result.diagnostics.filter((d) => d.severity === "warning"))

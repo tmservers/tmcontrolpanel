@@ -1,4 +1,4 @@
-export declare function compilePluginLoad(file: string, source: string, rootDir: string): {
+export declare function compilePluginLoad(file: string, source: string, rootDir: string, keyPrefix?: string): {
     code: string;
     diagnostics: import("./util.js").CompileDiagnostic[];
 } | null;

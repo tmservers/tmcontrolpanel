@@ -347,7 +347,7 @@ Name the entry `src/index.tsx` and import the SDK as usual. The UI kit and mania
 
 ```tsx
 import { definePlugin, type WidgetRenderProps } from "@tmcontrolpanel/plugin-sdk";
-import { Label, Panel } from "@tmcontrolpanel/plugin-sdk/ui";
+import { Label, Panel, WidgetFrame } from "@tmcontrolpanel/plugin-sdk/ui";
 import { Manialink } from "maniatsx";
 import { client, Publish, type Integer } from "maniatsx/client";
 
@@ -362,10 +362,10 @@ export default definePlugin({
   create(ctx) {
     function Board(props: WidgetRenderProps) {
       return (
-        <Manialink id={props.id}>
+        <WidgetFrame {...props}>
           <Panel tone="surface" size={[40, 10]} />
           <Label tone="text" pos={[2, -2]} text={client.bind(() => `${score.value.points}`)} />
-        </Manialink>
+        </WidgetFrame>
       );
     }
 
@@ -390,12 +390,12 @@ export default definePlugin({
 ### Components
 
 - `ctx.ui.widget({ component, updateComponent?, ... })` and `ctx.ui.window({ component, ... })` take a component instead of `template`. Passing both is an error.
-- A component receives `{ id, position, size, title, hideWhileDriving, data }` and returns a whole page, so wrap it in `<Manialink id={props.id}>`.
+- A component receives `{ id, position, size, title, hideWhileDriving, data }` and returns a whole page. Wrap a widget in `<WidgetFrame {...props}>`: it places the content at `position`, reveals it after load and hides it while driving when `hideWhileDriving` is set, like template widgets. Update components only carry data, so a bare `<Manialink id={props.id}>` is enough there.
 - `updateComponent` renders the small `-update` page that `widget.update()` re-sends. Publish new data from it with `client.shared` and `<Publish>`; the main page reads `shared.value` in bindings and `client.watch`, and keeps its own client state.
 
 ### Theming
 
-- `@tmcontrolpanel/plugin-sdk/ui` exports `Panel`, `Label`, `Table` and `WindowFrame`. They take a `tone` that maps to the preset's tokens (`surface`, `content`, `text`, `textMuted`, ...), so a preset restyles your widget without changes on your side.
+- `@tmcontrolpanel/plugin-sdk/ui` exports `WidgetFrame`, `Page`, `Panel`, `Label`, `Table` and `WindowFrame`. They take a `tone` that maps to the preset's tokens (`surface`, `content`, `text`, `textMuted`, ...), so a preset restyles your widget without changes on your side.
 - `kit.useTokens()` gives the raw tokens (`color`, `font`, `opacity`) for anything the primitives don't cover. `ctx.ui.themeData()` returns the whole preset.
 - The primitives are maniatsx slots: future presets can ship their own look for them, and your widget picks it up.
 

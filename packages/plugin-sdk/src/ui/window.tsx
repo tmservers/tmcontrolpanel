@@ -20,7 +20,12 @@ export const WindowFrame = slot<WindowFrameProps>("ui/window", (props) => {
   const [width, height] = props.size;
   const color = kit.useTokens().color;
   return (
-    <frame id="window" pos={[-width / 2, height / 2]} size={[width, height + 5]} z-index={20}>
+    <frame
+      id="window"
+      pos={[-width / 2, height / 2]}
+      size={[width, height + 5]}
+      z-index={20}
+    >
       <Panel tone="surface" pos={[0, 0]} size={[width, 5]} />
       <Label
         tone="text"

@@ -14,6 +14,7 @@ export const kit = createThemeKit<ThemeTokens>({
 
 export const DEFAULT_THEME_DATA: ThemeData = defaultTheme;
 
-export const toKitTheme = (theme: ThemeData): KitThemeData<ThemeTokens> => theme;
+export const toKitTheme = (theme: ThemeData): KitThemeData<ThemeTokens> =>
+  theme;
 
 export type { ThemeData, ThemeTokens };

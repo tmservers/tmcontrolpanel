@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { legacyManialinkTheme, resolveServerTheme } from "../themes";
 
 // Colors manialink templates read as {{@theme.quad.*}} and {{@theme.label.*}}, as three-digit hex without "#" (e.g. "DDD")
 // Types, not interfaces, so the theme can be stored as JSON
@@ -27,11 +28,13 @@ export const DEFAULT_THEME: ManialinkTheme = {
   label: DEFAULT_PALETTE,
 };
 
+/** @deprecated color themes are replaced by presets */
 export const THEME_TARGETS = [
   "quad",
   "label",
 ] as const satisfies readonly (keyof ManialinkTheme)[];
 
+/** @deprecated color themes are replaced by presets */
 export const THEME_COLORS = [
   "foreground",
   "background",
@@ -45,6 +48,7 @@ const color = z
   .regex(/^[0-9a-f]{3}$/i, "Use three hex digits, such as DDD")
   .transform((value) => value.toUpperCase());
 
+/** @deprecated color themes are replaced by presets */
 export const themePaletteSchema = z.object({
   foreground: color,
   background: color,
@@ -52,12 +56,14 @@ export const themePaletteSchema = z.object({
   backgroundMuted: color,
 });
 
+/** @deprecated color themes are replaced by presets */
 export const manialinkThemeSchema = z.object({
   quad: themePaletteSchema,
   label: themePaletteSchema,
 });
 
 // A stored theme, or null when it is missing or no longer valid
+/** @deprecated color themes are replaced by presets */
 export function parseTheme(value: unknown): ManialinkTheme | null {
   // Themes saved before the quad/label split are one flat palette
   const flat = themePaletteSchema.safeParse(value);
@@ -71,9 +77,5 @@ export function resolveTheme(
   serverTheme: unknown,
   groupThemes: unknown[] = [],
 ): ManialinkTheme {
-  for (const theme of [serverTheme, ...groupThemes]) {
-    const parsed = parseTheme(theme);
-    if (parsed) return parsed;
-  }
-  return DEFAULT_THEME;
+  return legacyManialinkTheme(resolveServerTheme(serverTheme, groupThemes));
 }

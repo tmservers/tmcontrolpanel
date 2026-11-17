@@ -1,9 +1,11 @@
 import type { PlayerManialinkPageAnswer } from "@tmcontrolpanel/shared";
 import type { Logger } from "../logger";
 
+export type ActionParams = { [key: string]: string | string[]; args: string[] };
+
 export type ActionHandler = (
   answer: PlayerManialinkPageAnswer,
-  params: Record<string, string>,
+  params: ActionParams,
 ) => unknown;
 
 interface Route {
@@ -47,7 +49,11 @@ export class ActionRouter {
   register(pattern: string, handler: ActionHandler): () => void {
     let route = this.routes.get(pattern);
     if (!route) {
-      route = { pattern, ...compileActionPattern(pattern), handlers: new Set() };
+      route = {
+        pattern,
+        ...compileActionPattern(pattern),
+        handlers: new Set(),
+      };
       this.routes.set(pattern, route);
     }
     route.handlers.add(handler);
@@ -57,14 +63,15 @@ export class ActionRouter {
 
   async dispatch(answer: PlayerManialinkPageAnswer): Promise<void> {
     const running: Promise<void>[] = [];
+    const [action, ...args] = answer.Answer.split("|");
 
     for (const route of [...this.routes.values()]) {
       let params: Record<string, string> | null = null;
 
-      if (route.pattern === answer.Answer) {
+      if (route.pattern === action) {
         params = {};
       } else if (route.regex) {
-        const match = route.regex.exec(answer.Answer);
+        const match = route.regex.exec(action);
         if (match) {
           params = Object.fromEntries(
             route.keys.map((key, i) => [key, match[i + 1]]),
@@ -73,9 +80,10 @@ export class ActionRouter {
       }
 
       if (!params) continue;
+      const handlerParams = { ...params, args };
 
       for (const handler of [...route.handlers]) {
-        const matched = params;
+        const matched = handlerParams;
         running.push(
           (async () => {
             try {

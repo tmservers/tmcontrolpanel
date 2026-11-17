@@ -486,6 +486,7 @@ export class SandboxedPlugin implements PluginInstance {
       actionPrefix: this.prefix,
       templates: { ...this.deps.assets.baseTemplates, ...this.templates },
       theme: this.ctx.theme(),
+      themeData: this.ctx.themeData(),
     }),
 
     log: (level: unknown, message: unknown, data: unknown) => {

@@ -105,6 +105,7 @@ export function createPluginContext(
     config: () => config,
     serverName: services.serverName,
     theme: () => services.state.theme,
+    themeData: () => services.state.themeData,
 
     async saveConfig(next) {
       await services.servers.updatePluginConfig(

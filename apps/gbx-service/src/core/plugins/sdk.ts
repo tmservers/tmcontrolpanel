@@ -3,6 +3,7 @@ import type {
   ManialinkTheme,
   NotificationDto,
   PlayerInfo,
+  ThemeData,
 } from "@tmcontrolpanel/shared";
 import type { z } from "zod";
 import type { ChatService } from "../chat/chat-service";
@@ -64,6 +65,7 @@ export interface PluginContext<Config = unknown> {
   serverName(): string | null;
   // Colors templates get as @theme
   theme(): ManialinkTheme;
+  themeData(): ThemeData;
   // Persists a new config for this plugin and notifies the instance
   saveConfig(config: Config): Promise<void>;
 

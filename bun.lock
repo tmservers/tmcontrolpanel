@@ -26,6 +26,7 @@
         "handlebars": "^4.7.10",
         "handlebars-layouts": "^3.1.4",
         "ioredis": "^5.6.1",
+        "maniatsx": "workspace:*",
         "pino": "^10.3.1",
         "quickjs-emscripten-core": "0.32.0",
         "slugid": "^5.0.1",
@@ -48,7 +49,7 @@
     },
     "apps/web": {
       "name": "@tmcontrolpanel/web",
-      "version": "0.12.0-beta",
+      "version": "1.0.0",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.132.0",
         "@codemirror/lang-cpp": "^6.0.2",
@@ -158,6 +159,13 @@
       "devDependencies": {
         "prisma": "^6.8.2",
         "typescript": "^5",
+      },
+    },
+    "packages/maniatsx": {
+      "name": "maniatsx",
+      "version": "0.1.0",
+      "dependencies": {
+        "typescript6": "npm:typescript@6.0.3",
       },
     },
     "packages/plugin-sdk": {
@@ -1954,6 +1962,8 @@
 
     "magic-string": ["magic-string@1.4.2", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.6.0" } }, "sha512-vG+rjFRj1PqdIBozIxAGMjPlOhaVe+GXpbttY/iSK7rGcJRMlwNJO7dcUwmUqkymsFLJiNGI06t4D7Fr7yRC9g=="],
 
+    "maniatsx": ["maniatsx@workspace:packages/maniatsx"],
+
     "markdown-table": ["markdown-table@3.0.4", "", {}, "sha512-wiYz4+JrLyb/DqW2hkFJxP7Vd7JuTDm77fvbM8VfEQdmSMqcImWeeRbHwZjBjIFki/VaMK2BhFi7oUUZeM5bqw=="],
 
     "math-intrinsics": ["math-intrinsics@1.1.0", "", {}, "sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g=="],
@@ -2541,6 +2551,8 @@
     "typed-array-length": ["typed-array-length@1.0.7", "", { "dependencies": { "call-bind": "^1.0.7", "for-each": "^0.3.3", "gopd": "^1.0.1", "is-typed-array": "^1.1.13", "possible-typed-array-names": "^1.0.0", "reflect.getprototypeof": "^1.0.6" } }, "sha512-3KS2b+kL7fsuk/eJZ7EQdnEmQoaho/r6KUef7hxvltNA5DR8NAUM+8wJMbJyZ4G9/7i3v5zPBIMN5aybAh2/Jg=="],
 
     "typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+
+    "typescript6": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
 
     "ufo": ["ufo@1.6.4", "", {}, "sha512-JFNbkD1Svwe0KvGi8GOeLcP4kAWQ609twvCdcHxq1oSL8svv39ZuSvajcD8B+5D0eL4+s1Is2D/O6KN3qcTeRA=="],
 

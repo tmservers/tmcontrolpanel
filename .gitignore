@@ -20,6 +20,8 @@ out/
 # production
 build
 dist
+# vendored build output of maniatsx
+!/packages/maniatsx/dist
 
 # misc
 .DS_Store

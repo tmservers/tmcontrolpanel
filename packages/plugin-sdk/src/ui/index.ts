@@ -1,3 +1,4 @@
+import "./install";
 // The UI kit for TSX widgets: the shared theme kit and the primitives, each a maniatsx slot
 export { Label, type LabelProps, type LabelTone } from "./label";
 export { Page, ScriptPrelude, type PageProps } from "./page";

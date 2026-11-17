@@ -194,6 +194,10 @@ export function guestRuntime(global: any): void {
     const template = options.template;
     const renderMain = options.render;
     const renderUpdate = options.renderUpdate;
+    if ((options as { component?: unknown }).component !== undefined)
+      throw new TypeError(
+        'Component widgets need the UI kit: import "@tmcontrolpanel/plugin-sdk/ui" in the plugin',
+      );
     if ((typeof template === "string") === (typeof renderMain === "function"))
       throw new TypeError("Provide exactly one of template or render");
 

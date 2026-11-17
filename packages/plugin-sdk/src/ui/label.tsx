@@ -20,6 +20,8 @@ export interface LabelProps {
   pos?: Vec2;
   size?: Vec2;
   textsize?: number;
+  // Formatting codes put before the text, e.g. "$i" for italics
+  textprefix?: string;
   halign?: "left" | "center" | "right";
   valign?: "top" | "center" | "center2" | "bottom";
   "z-index"?: number;

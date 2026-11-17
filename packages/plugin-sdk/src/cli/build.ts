@@ -12,8 +12,9 @@ import {
 
 // This package's own entry (src/index.ts here, dist/index.js once built), so plugins always
 // bundle the definePlugin() of the CLI that builds them
-function sdkEntry(): string | undefined {
-  return ["../index.ts", "./index.js"]
+// The SDK entry (or its ui entry) next to this CLI, from source or from the built dist
+function sdkEntry(sub = ""): string | undefined {
+  return [`..${sub}/index.ts`, `.${sub}/index.js`]
     .map((path) => fileURLToPath(new URL(path, import.meta.url)))
     .find(existsSync);
 }
@@ -31,7 +32,6 @@ export async function buildPlugin(
 ): Promise<BuildResult> {
   const manifest = readProjectManifest(dir);
   const source = findSource(dir);
-  const sdk = sdkEntry();
   const pluginId = manifest.slug;
   const outFile = distEntry(dir, manifest, options.outDir);
 
@@ -58,15 +58,18 @@ export async function buildPlugin(
           b.onResolve({ filter: /^maniatsx(\/|$)/ }, (args) => ({
             path: fileURLToPath(import.meta.resolve(args.path)),
           }));
+          // The SDK bundles itself, so plugins always get this SDK's runtime and UI kit
+          b.onResolve(
+            { filter: /^@tmcontrolpanel\/plugin-sdk(\/ui)?$/ },
+            (args) => {
+              const path = sdkEntry(args.path.endsWith("/ui") ? "/ui" : "");
+              return path ? { path } : undefined;
+            },
+          );
         },
       },
       maniatsxEsbuildPlugin({ rootDir: dir, keyPrefix: `${pluginId}.` }),
     ],
-    alias: sdk
-      ? {
-          "@tmcontrolpanel/plugin-sdk": sdk,
-        }
-      : {},
   }).catch(
     (error: {
       errors?: {

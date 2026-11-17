@@ -1,3 +1,4 @@
+import { action as clientAction } from "maniatsx/client";
 import { renderComponent } from "./render";
 import type { PluginContext, PluginDefinition } from "./types";
 
@@ -18,6 +19,9 @@ export function definePlugin<Config = Record<string, unknown>>(
       create(ctx: PluginContext<Config>) {
         const ui = {
           ...ctx.ui,
+          action(name: string) {
+            return clientAction(`${ctx.ui.actionPrefix()}${name}`);
+          },
           widget(options: any) {
             if (!options.component) return ctx.ui.widget(options);
             const {

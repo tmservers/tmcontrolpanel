@@ -348,6 +348,9 @@ export function guestRuntime(global: any): void {
     ui: Object.freeze({
       widget: (options: WidgetOptions) => makePage("widget", options) as Widget,
       window: (options: WindowOptions) => makePage("window", options) as Window,
+      themeData: () => themeData,
+      // The plugin's action prefix, for actions triggered from compiled client code
+      actionPrefix: () => prefix,
       addButton: (button: ActionButton) => call("ui.addButton", button),
       removeButton: (name: string) => call("ui.removeButton", name),
     }),

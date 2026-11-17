@@ -1,0 +1,9 @@
+{
+  "slug": "tsx-demo",
+  "name": "TSX demo",
+  "version": "1.0.0",
+  "sdk": 5,
+  "description": "Test fixture: a TSX component widget with client code.",
+  "author": "Tests",
+  "capabilities": ["ui", "storage"]
+}

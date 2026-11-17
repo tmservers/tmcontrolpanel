@@ -1,25 +1,33 @@
 import type { Vec2 } from "maniatsx";
+import type { ClientBinding } from "maniatsx/client";
 import { slot } from "maniatsx/theme";
 import { kit } from "./theme";
 
-export type LabelTone = "text" | "textMuted" | "contentText" | "contentTextMuted";
+// Props the game can update live from client code (client.bind)
+type Bindable<T> = T | ClientBinding<T>;
+
+export type LabelTone =
+  | "text"
+  | "textMuted"
+  | "contentText"
+  | "contentTextMuted";
 
 export interface LabelProps {
   tone: LabelTone;
   // The theme's title or body font when absent
   font?: "title" | "body";
-  text?: string;
+  text?: Bindable<string>;
   pos?: Vec2;
   size?: Vec2;
   textsize?: number;
   halign?: "left" | "center" | "right";
   valign?: "top" | "center" | "center2" | "bottom";
   "z-index"?: number;
-  opacity?: number;
+  opacity?: Bindable<number>;
   action?: string;
   focusareacolor1?: string;
   focusareacolor2?: string;
-  hidden?: boolean;
+  hidden?: Bindable<boolean>;
   id?: string;
 }
 

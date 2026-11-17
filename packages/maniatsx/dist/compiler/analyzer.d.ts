@@ -6,6 +6,7 @@ export interface Sink {
 export type AuthoringKind = "state" | "shared" | "watch" | "ref" | "handler" | "bind" | "fn" | "onInit" | "onFrame";
 export declare const LIBS: Set<string>;
 export declare const VEC_CTORS: Set<string>;
+export declare const isLibraryFile: (fileName: string, rel: string) => boolean;
 export declare const inAuthoring: (n: ts.Node) => boolean;
 export declare const inApi: (n: ts.Node) => boolean;
 export declare const inTypes: (n: ts.Node) => boolean;

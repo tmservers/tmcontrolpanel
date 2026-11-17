@@ -1,5 +1,7 @@
 import ts from "typescript6";
+import { existsSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { Analyzer, authoringCallKind, unparen } from "./analyzer.js";
 import { Lowerer } from "./lower.js";
 import { toMs } from "./ty.js";
@@ -221,6 +223,18 @@ function stateOptions(analyzer, node) {
         return bad(node, "`key` only applies with `persist: true`.");
     return persist ? { persist: true, ...(key !== undefined && { key }) } : undefined;
 }
+// maniatsx's own entry points, from this compiler's install (source in the repo, .d.ts when built),
+// so projects that don't install maniatsx themselves still resolve its client API
+const PKG = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const FROM_SOURCE = existsSync(path.join(PKG, "src/client/index.ts"));
+const entry = (src, dts) => path.join(PKG, FROM_SOURCE ? src : dts);
+const OWN_PATHS = {
+    maniatsx: [entry("src/index.ts", "dist/index.d.ts")],
+    "maniatsx/client": [entry("src/client/index.ts", "dist/client/index.d.ts")],
+    "maniatsx/maniascript": [entry("src/maniascript/index.ts", "dist/maniascript/index.d.ts")],
+    "maniatsx/jsx-runtime": [entry("src/jsx-runtime.ts", "dist/jsx-runtime.d.ts")],
+    "maniatsx/theme": [entry("src/theme.ts", "dist/theme.d.ts")],
+};
 export function compileSource(fileName, sourceText, opts = {}) {
     const keyPrefix = opts.keyPrefix;
     const root = path.resolve(opts.rootDir ?? process.cwd());
@@ -228,16 +242,15 @@ export function compileSource(fileName, sourceText, opts = {}) {
     try {
         const options = {
             target: ts.ScriptTarget.ES2022,
-            module: ts.ModuleKind.NodeNext,
-            moduleResolution: ts.ModuleResolutionKind.NodeNext,
+            // Analysis only: bundler resolution accepts extensionless, .ts and package-exports imports alike
+            module: ts.ModuleKind.ESNext,
+            moduleResolution: ts.ModuleResolutionKind.Bundler,
+            allowImportingTsExtensions: true,
+            noEmit: true,
             jsx: ts.JsxEmit.ReactJSX,
             jsxImportSource: "maniatsx",
             baseUrl: root,
-            paths: {
-                "maniatsx/client": ["src/client/index.ts"],
-                "maniatsx/maniascript": ["src/maniascript/index.ts"],
-                "maniatsx/jsx-runtime": ["src/jsx-runtime.ts"],
-            },
+            paths: OWN_PATHS,
             skipLibCheck: true,
         };
         const host = ts.createCompilerHost(options);

@@ -255,6 +255,8 @@ export interface PluginContext<Config = Record<string, unknown>> {
     window(options: WindowOptions): Window;
     themeData(): import("@tmcontrolpanel/shared").ThemeData;
     action(name: string): import("maniatsx/client").Action;
+    // Prefix the host adds to this plugin's action names
+    actionPrefix(): string;
     addButton(button: ActionButton): void;
     removeButton(name: string): void;
   };

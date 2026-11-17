@@ -1,5 +1,6 @@
 import type { DbClient, Maps, Notifications, Prisma } from "@tmcontrolpanel/db";
 import {
+  resolveServerTheme,
   resolveTheme,
   type NotificationDto,
   type PlayerInfo,
@@ -145,6 +146,7 @@ export class PrismaServerRepository implements ServerRepository {
       ),
       enableHelpCommand: server.enableHelpCommand,
       theme: resolveTheme(server.theme, groupThemes),
+      themeData: resolveServerTheme(server.theme, groupThemes),
       chat: {
         manualRouting: server.manualRouting,
         messageFormat: server.messageFormat,

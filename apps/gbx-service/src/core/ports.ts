@@ -2,6 +2,7 @@ import type {
   ChatConfig,
   ManialinkTheme,
   PluginManifest,
+  ThemeData,
   JukeboxEntry,
   NotificationDto,
   PlayerInfo,
@@ -20,6 +21,8 @@ export interface ServerRecord {
   enableHelpCommand: boolean;
   // Resolved from the server, its groups and the default
   theme: ManialinkTheme;
+  // The same settings as a preset; the Default preset when absent
+  themeData?: ThemeData;
   plugins: ServerPluginRecord[];
 }
 

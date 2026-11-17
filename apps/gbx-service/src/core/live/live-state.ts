@@ -8,8 +8,10 @@ import {
   PlayerRound,
   PlayerStatus,
   PlayerWaypoint,
+  resolvePreset,
   SPlayerInfo,
   Team,
+  ThemeData,
 } from "@tmcontrolpanel/shared";
 import type { MapRecord, ServerPluginRecord } from "../ports";
 import { ParsedScriptSettings } from "./modes";
@@ -25,6 +27,8 @@ export class LiveState {
   chat: ChatConfig | null = null;
   enableHelpCommand = true;
   theme: ManialinkTheme = DEFAULT_THEME;
+  // The resolved preset, for component pages
+  themeData: ThemeData = resolvePreset("default");
   plugins: ServerPluginRecord[] = [];
 
   currentMatchId: string | null = null;
@@ -63,7 +67,10 @@ export class LiveState {
     this.activePlayers = this.activePlayers.filter((p) => p.login !== login);
   }
 
-  setActiveRoundPlayer(login: string, player: PlayerWaypoint | undefined): void {
+  setActiveRoundPlayer(
+    login: string,
+    player: PlayerWaypoint | undefined,
+  ): void {
     if (!this.liveInfo.activeRound) {
       this.liveInfo.activeRound = { players: {} };
     }

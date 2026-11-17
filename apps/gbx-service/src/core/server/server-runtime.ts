@@ -1,5 +1,6 @@
 import {
   MAX_CUSTOM_EVENT_BYTES,
+  resolvePreset,
   type CommandResult,
   type LiveSnapshot,
   type PluginCustomEvent,
@@ -165,6 +166,7 @@ export class ServerRuntime {
       manialinks: this.manialinks,
       actions,
       theme: () => state.theme,
+      themeData: () => state.themeData,
     };
     const actionGroup = new ActionGroup(manialinkDeps);
     const admins = new ServerAdmins(
@@ -492,7 +494,7 @@ export class ServerRuntime {
     this.name = record.name;
     this.state.enableHelpCommand = record.enableHelpCommand;
     await this.refreshChatConfig(record.chat);
-    await this.refreshTheme(record.theme);
+    await this.refreshTheme(record.theme, record.themeData);
 
     // No attempt yet: the one that is about to run reads this record anyway
     if (!this.attemptedTarget || sameTarget(this.attemptedTarget, record))
@@ -522,9 +524,18 @@ export class ServerRuntime {
   }
 
   // Plugins render their pages with the theme, so they reload to show the new one
-  private async refreshTheme(theme: ServerRecord["theme"]): Promise<void> {
-    if (JSON.stringify(theme) === JSON.stringify(this.state.theme)) return;
+  private async refreshTheme(
+    theme: ServerRecord["theme"],
+    themeData: ServerRecord["themeData"],
+  ): Promise<void> {
+    const data = themeData ?? resolvePreset("default");
+    if (
+      JSON.stringify([theme, data]) ===
+      JSON.stringify([this.state.theme, this.state.themeData])
+    )
+      return;
     this.state.theme = theme;
+    this.state.themeData = data;
     if (!this.connected) return;
     try {
       await this.plugins.reload(this.state.plugins, this.state.liveInfo.type);
@@ -636,6 +647,7 @@ export class ServerRuntime {
     this.state.chat = server.chat;
     this.state.enableHelpCommand = server.enableHelpCommand;
     this.state.theme = server.theme;
+    this.state.themeData = server.themeData ?? resolvePreset("default");
     this.state.plugins = server.plugins;
 
     // Callbacks start before the sync below has loaded the map and players, so hold them

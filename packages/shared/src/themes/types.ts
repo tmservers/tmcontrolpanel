@@ -14,6 +14,18 @@ export type ThemeTokens = {
   opacity: { panel: number };
 };
 
+// Same values as maniatsx's Anchor, so ThemeData passes to its ThemeProvider as is
+export type ThemeAnchor =
+  | "top-left"
+  | "top"
+  | "top-right"
+  | "left"
+  | "center"
+  | "right"
+  | "bottom-left"
+  | "bottom"
+  | "bottom-right";
+
 export type ThemeData = {
   id: string;
   name: string;
@@ -23,7 +35,7 @@ export type ThemeData = {
   layout: Record<
     string,
     Partial<{
-      anchor: string;
+      anchor: ThemeAnchor;
       margin: [number, number];
       size: [number, number];
       scale: number;

@@ -5,5 +5,6 @@
   "sdk": 5,
   "description": "Test fixture: a TSX component widget with client code.",
   "author": "Tests",
+  "commands": ["stats"],
   "capabilities": ["ui", "storage"]
 }

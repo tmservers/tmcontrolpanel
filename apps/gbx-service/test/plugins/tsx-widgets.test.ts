@@ -28,7 +28,9 @@ beforeAll(async () => {
 afterAll(() => rmSync(outDir, { recursive: true, force: true }));
 
 const pages = (h: Harness) =>
-  h.session.sent.map((call) => String(call.params[0])).join("\n");
+  h.session.sent
+    .map((call) => String(call.params[call.method.endsWith("ToLogin") ? 1 : 0]))
+    .join("\n");
 
 describe("TSX component widgets", () => {
   it("renders the component and its update page with the server's preset", async () => {
@@ -63,5 +65,27 @@ describe("TSX component widgets", () => {
     expect(
       h.pluginStorage.values.get(`${SERVER_ID}/plugin-tsx-demo/args`)?.value,
     ).toEqual(["42"]);
+  });
+
+  it("sends a component window with its data page", async () => {
+    const h = await createHarness({
+      packages: [{ bytes }],
+      players: [player("p1")],
+    });
+
+    await h.chat("p1", "/stats");
+
+    const xml = pages(h);
+    expect(xml).toContain('id="plg.tsx-demo.stats"');
+    expect(xml).toContain('id="plg.tsx-demo.stats-update"');
+    expect(xml).toContain("points = 9");
+  });
+
+  it("sends no data page for a component without an update component", async () => {
+    const h = await createHarness({ packages: [{ bytes }] });
+    const xml = pages(h);
+
+    expect(xml).toContain('id="plg.tsx-demo.badge"');
+    expect(xml).not.toContain("badge-update");
   });
 });

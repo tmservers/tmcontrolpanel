@@ -20,31 +20,25 @@ if (typeof scope.__tmcpRegister === "function" && !scope.__tmcpUiInstalled) {
       ...definition,
       create(ctx: PluginContext<unknown>) {
         const theme = () => ctx.ui.themeData();
+        // Components become render functions the guest runtime calls
+        const toRender = ({ component, updateComponent, ...rest }: any) => ({
+          ...rest,
+          render: (props: any) => renderComponent(component, props, theme()),
+          renderUpdate: updateComponent
+            ? (props: any) => renderComponent(updateComponent, props, theme())
+            : undefined,
+        });
         const ui = {
           ...ctx.ui,
           action: (name: string) =>
             clientAction(`${ctx.ui.actionPrefix()}${name}`),
           widget(options: any) {
             if (!options.component) return ctx.ui.widget(options);
-            const { component, updateComponent, ...rest } = options;
-            return ctx.ui.widget({
-              ...rest,
-              render: (props: any) =>
-                renderComponent(component, props, theme()),
-              renderUpdate: updateComponent
-                ? (props: any) =>
-                    renderComponent(updateComponent, props, theme())
-                : undefined,
-            });
+            return ctx.ui.widget(toRender(options));
           },
           window(options: any) {
             if (!options.component) return ctx.ui.window(options);
-            const { component, ...rest } = options;
-            return ctx.ui.window({
-              ...rest,
-              render: (props: any) =>
-                renderComponent(component, props, theme()),
-            });
+            return ctx.ui.window(toRender(options));
           },
         };
         return definition.create({ ...ctx, ui } as PluginContext<unknown>);

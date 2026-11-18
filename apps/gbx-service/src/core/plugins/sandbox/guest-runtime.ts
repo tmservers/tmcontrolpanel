@@ -178,7 +178,11 @@ export function guestRuntime(global: any): void {
       kind === "window" ? (options as WindowOptions).onClose : undefined;
     const closeHandler =
       typeof onClose === "function" ? handler("window close", onClose) : null;
-    const withUpdate = options.withUpdate !== false;
+    // A component page has a data page only when it brings an update component
+    const withUpdate =
+      options.withUpdate !== false &&
+      (typeof options.render !== "function" ||
+        typeof options.renderUpdate === "function");
     const page = call("ui.create", kind, {
       id: options.id,
       login: options.login ?? null,

@@ -92,7 +92,9 @@ export class Manialink {
   }
 
   display(): void {
-    this.deps.manialinks.display(this.id, this.render(), this.login);
+    this.deps.manialinks.display(this.id, this.render(), this.login, () =>
+      this.render(),
+    );
     this.updatePage?.display();
   }
 

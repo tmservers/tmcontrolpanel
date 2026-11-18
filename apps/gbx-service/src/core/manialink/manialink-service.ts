@@ -6,19 +6,33 @@ function emptyManialink(id: string): string {
             <manialinks><manialink id="${id}"></manialink></manialinks>`;
 }
 
+function pageKey(id: string, login?: string): string {
+  return login ? `${login}\n${id}` : id;
+}
+
 // Displays manialinks and remembers them so (re)connecting players get the same UI.
 // Kept in memory: every GBX (re)connect starts from a clean slate anyway.
 export class ManialinkService {
   private readonly publicPages = new Map<string, string>();
   private readonly playerPages = new Map<string, Map<string, string>>();
+  // Rebuilds a page's XML, so a theme change can redraw it
+  private readonly renderers = new Map<string, () => string>();
 
   constructor(
     private readonly gbx: GbxConnection,
     private readonly log: Logger,
   ) {}
 
-  display(id: string, xml: string, login?: string): void {
+  display(
+    id: string,
+    xml: string,
+    login?: string,
+    rerender?: () => string,
+  ): void {
     this.hide(id, login);
+    const key = pageKey(id, login);
+    if (rerender) this.renderers.set(key, rerender);
+    else this.renderers.delete(key);
 
     if (login) {
       this.pagesFor(login).set(id, xml);
@@ -42,6 +56,7 @@ export class ManialinkService {
 
   destroy(id: string, login?: string): void {
     this.hide(id, login);
+    this.renderers.delete(pageKey(id, login));
     if (login) {
       this.playerPages.get(login)?.delete(id);
     } else {
@@ -63,6 +78,24 @@ export class ManialinkService {
     await this.multicall(calls);
   }
 
+  // Rebuilds the pages that can be re-rendered (a new theme, for instance) and sends them
+  async rerenderAll(): Promise<void> {
+    const calls: GbxCall[] = [];
+    for (const [id, xml] of this.publicPages) {
+      const next = this.rerendered(id, xml);
+      this.publicPages.set(id, next);
+      calls.push(["SendDisplayManialinkPage", next, 0, false]);
+    }
+    for (const [login, pages] of this.playerPages) {
+      for (const [id, xml] of pages) {
+        const next = this.rerendered(id, xml, login);
+        pages.set(id, next);
+        calls.push(["SendDisplayManialinkPageToLogin", login, next, 0, false]);
+      }
+    }
+    await this.multicall(calls);
+  }
+
   async onPlayerConnect(login: string): Promise<void> {
     const calls: GbxCall[] = [];
     for (const xml of this.publicPages.values()) {
@@ -75,17 +108,38 @@ export class ManialinkService {
   }
 
   onPlayerDisconnect(login: string): void {
+    for (const id of this.playerPages.get(login)?.keys() ?? [])
+      this.renderers.delete(pageKey(id, login));
     this.playerPages.delete(login);
   }
 
   clear(): void {
     this.publicPages.clear();
     this.playerPages.clear();
+    this.renderers.clear();
   }
 
   // Exposed for tests and diagnostics
   displayedIds(login?: string): string[] {
-    return [...(login ? (this.playerPages.get(login)?.keys() ?? []) : this.publicPages.keys())];
+    return [
+      ...(login
+        ? (this.playerPages.get(login)?.keys() ?? [])
+        : this.publicPages.keys()),
+    ];
+  }
+
+  private rerendered(id: string, xml: string, login?: string): string {
+    const render = this.renderers.get(pageKey(id, login));
+    if (!render) return xml;
+    try {
+      return render();
+    } catch (error) {
+      this.log.error(
+        { err: error, manialinkId: id, login },
+        "Failed to re-render manialink",
+      );
+      return xml;
+    }
   }
 
   private pagesFor(login: string): Map<string, string> {

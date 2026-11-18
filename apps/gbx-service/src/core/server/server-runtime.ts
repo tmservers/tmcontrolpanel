@@ -523,7 +523,7 @@ export class ServerRuntime {
     }
   }
 
-  // Plugins render their pages with the theme, so they reload to show the new one
+  // Plugins reload to pick up the new theme; core pages are re-rendered in place
   private async refreshTheme(
     theme: ServerRecord["theme"],
     themeData: ServerRecord["themeData"],
@@ -545,6 +545,7 @@ export class ServerRuntime {
         "Failed to reload plugins for the new theme",
       );
     }
+    await this.manialinks.rerenderAll();
   }
 
   private async restart(): Promise<void> {

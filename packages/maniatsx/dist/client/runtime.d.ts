@@ -15,6 +15,7 @@ export declare class ClientScope {
     private attached;
     private functions;
     private handlers;
+    private eventHandlers;
     private elementCount;
     private controlCount;
     private dirty;
@@ -28,6 +29,7 @@ export declare class ClientScope {
     watch(shared: ClientShared, code: CompiledCode): void;
     publish(shared: ClientShared, value: unknown): void;
     private handler;
+    private eventHandler;
     private finishShared;
     private persisted;
     ref(ref: ClientRef): string;

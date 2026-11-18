@@ -163,6 +163,21 @@ export class Lowerer {
             this.exprStmt(body);
         return this.finish(out);
     }
+    // An on* handler; its optional parameter is the event the page script passes in as `Event`
+    lowerHandler() {
+        const [param, ...extra] = this.closure.parameters;
+        for (const p of extra)
+            this.err(p, "param", "A client.handler takes at most one parameter, the event.");
+        if (param) {
+            const sym = this.checker.getSymbolAtLocation(param.name);
+            if (sym) {
+                this.names.set(sym, "Event");
+                this.localTys.set(sym, { class: "CMlScriptEvent" });
+            }
+            this.usedNames.add("Event");
+        }
+        return this.lowerStatements();
+    }
     // init/frame bodies share the main/loop scope, so wrap them when they declare locals
     lowerLifecycle() {
         const out = this.begin();

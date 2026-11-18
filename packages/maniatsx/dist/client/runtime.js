@@ -111,6 +111,7 @@ export class ClientScope {
     attached = new Map();
     functions = new Set();
     handlers = new Map();
+    eventHandlers = new Map();
     elementCount = 0;
     controlCount = 0;
     dirty = false;
@@ -236,6 +237,16 @@ export class ClientScope {
             name = `Mtx_H${this.handlers.size + 1}`;
             this.handlers.set(body, name);
             this.host.part("functions", `Void ${name}() {\n${body}\n}`);
+        }
+        return name;
+    }
+    // Deduped function for an on* handler body; it receives the event
+    eventHandler(body) {
+        let name = this.eventHandlers.get(body);
+        if (!name) {
+            name = `Mtx_E${this.eventHandlers.size + 1}`;
+            this.eventHandlers.set(body, name);
+            this.host.part("functions", `Void ${name}(CMlScriptEvent Event) {\n${body}\n}`);
         }
         return name;
     }
@@ -367,8 +378,8 @@ export class ClientScope {
                 (attr !== "onSubmit" || tag === "entry" || tag === "textedit")) {
                 out.scriptevents = true;
                 const { text, declares } = this.body(handle.body);
-                const name = this.handler(declares + text);
-                this.host.part("events", `if (Event.Type == CMlScriptEvent::Type::${events[attr]} && Event.ControlId == ${literalText(id)}) ${name}();`);
+                const name = this.eventHandler(declares + text);
+                this.host.part("events", `if (Event.Type == CMlScriptEvent::Type::${events[attr]} && Event.ControlId == ${literalText(id)}) ${name}(Event);`);
             }
             else if (handle.kind === "bind" && bindings[tag]?.[attr]) {
                 this.ensureDirty();

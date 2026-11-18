@@ -25,6 +25,7 @@ export declare class Lowerer {
     private quietly;
     private begin;
     lowerStatements(): Item[];
+    lowerHandler(): Item[];
     lowerLifecycle(): Item[];
     private dedent;
     private finish;

@@ -125,7 +125,9 @@ function transform(program, files, root, keyPrefix) {
                                         ? lowerer.lowerFn()
                                         : kind === "onInit" || kind === "onFrame"
                                             ? lowerer.lowerLifecycle()
-                                            : lowerer.lowerStatements(),
+                                            : kind === "handler"
+                                                ? lowerer.lowerHandler()
+                                                : lowerer.lowerStatements(),
                                     ty: undefined,
                                 });
                             const code = descriptor(tracked.result.items, tracked.structs);

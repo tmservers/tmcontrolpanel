@@ -31,7 +31,8 @@ export const client = {
     ref() {
         return notCompiled("client.ref");
     },
-    // Event handler for on* props (onClick, onRightClick, onMouseOver, onMouseOut, onSubmit)
+    // Event handler for on* props (onClick, onRightClick, onMouseOver, onMouseOut, onSubmit).
+    // The optional parameter is the script event, e.g. `event.Control` inside a framemodel instance
     handler(body) {
         void body;
         return notCompiled("client.handler");

@@ -6,6 +6,9 @@ import { Label } from "./label";
 import { Panel } from "./panel";
 import { kit } from "./theme";
 
+// The color with a zero alpha digit per channel width (RGB -> RGBA, RRGGBB -> RRGGBBAA)
+const transparent = (hex: string) => hex + (hex.length === 6 ? "00" : "0");
+
 // U+F00D is the "x" glyph of the in-game icon font
 const CLOSE_ICON = "\uf00d";
 
@@ -48,7 +51,7 @@ export const WindowFrame = slot<WindowFrameProps>("ui/window", (props) => {
         halign="right"
         textsize={1}
         action={`close-window-${props.id}`}
-        focusareacolor2={`${color.text}0`}
+        focusareacolor2={transparent(color.text)}
       />
 
       <Panel tone="content" pos={[0, -5]} size={[width, height]} />

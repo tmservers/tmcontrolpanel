@@ -16,17 +16,45 @@ const DEFAULT_TOKENS: ThemeTokens = {
     contentText: "222",
     contentTextMuted: "333",
     accent: "DDD",
+    record: "DDD",
   },
   font: { body: "GameFontRegular", title: "GameFontSemiBold" },
-  opacity: { panel: 0.85 },
+  opacity: { panel: 0.85, surface: 1, content: 1 },
+  shape: { radius: 0, gap: 0 },
+};
+
+// See-through black panels with white text and a slight corner radius.
+// Colors stay three-digit: templates and older plugin bundles append an alpha digit to them.
+const BROADCAST: ThemePresetDefinition = {
+  id: "broadcast",
+  name: "Broadcast",
+  extends: "default",
+  tokens: {
+    color: {
+      surface: "000",
+      surfaceAlt: "000",
+      content: "000",
+      contentAlt: "000",
+      text: "EEF",
+      textMuted: "9AB",
+      contentText: "EEF",
+      contentTextMuted: "9AB",
+      accent: "FFF",
+      record: "EB4",
+    },
+    font: { body: "RajdhaniMono", title: "Oswald" },
+    opacity: { surface: 0.86, content: 0.72 },
+    shape: { radius: 0, gap: 0.5 },
+  },
 };
 
 const registry: readonly ThemePresetDefinition[] = [
   { id: "default", name: "Default", tokens: DEFAULT_TOKENS },
+  BROADCAST,
 ];
 
 export const DEFAULT_PRESET_ID = "default";
-export const THEME_PRESET_IDS = ["default"] as const;
+export const THEME_PRESET_IDS = ["default", "broadcast"] as const;
 export type ThemePresetId = (typeof THEME_PRESET_IDS)[number];
 export type ThemePresetSummary = { id: ThemePresetId; name: string };
 

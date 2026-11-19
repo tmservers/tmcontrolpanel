@@ -1,7 +1,7 @@
 import { Script, ms } from "maniatsx";
 import type { ActionButton } from "../components/action-group";
 import type { ManialinkPageProps } from "./types";
-import { Label, Panel } from "./ui";
+import { kit, Label, Panel } from "./ui";
 import { Widget } from "./widget";
 
 const SIZE = 5;
@@ -14,8 +14,10 @@ export function ActionGroupPage(props: ManialinkPageProps) {
   const actions =
     (props.data as { actions?: ActionButton[] } | undefined)?.actions ?? [];
   const count = actions.length;
-  const width = (count + 1) * SIZE;
-  const closedX = -count * SIZE;
+  // Themes with a gap show the buttons as separate tiles
+  const step = SIZE + kit.useTokens().shape.gap;
+  const width = count * step + SIZE;
+  const closedX = -count * step;
   return (
     <Widget
       id={props.id}
@@ -45,7 +47,7 @@ export function ActionGroupPage(props: ManialinkPageProps) {
 
       <frame pos={[0, 0]} size={[width, SIZE]} z-index={10}>
         <frame size={[width, SIZE]} pos={[closedX, 0]}>
-          <frame pos={[count * SIZE, 0]} size={[SIZE, SIZE]}>
+          <frame pos={[count * step, 0]} size={[SIZE, SIZE]}>
             <Panel tone="surface" size={[SIZE, SIZE]} />
             <Label
               tone="text"
@@ -58,7 +60,7 @@ export function ActionGroupPage(props: ManialinkPageProps) {
           </frame>
 
           {actions.map((action, index) => (
-            <frame pos={[index * SIZE, 0]} size={[SIZE, SIZE]}>
+            <frame pos={[index * step, 0]} size={[SIZE, SIZE]}>
               <Panel
                 tone="content"
                 size={[SIZE, SIZE]}
@@ -86,7 +88,7 @@ export function ActionGroupPage(props: ManialinkPageProps) {
           <Panel
             tone="surface"
             class="trigger"
-            pos={[count * SIZE, 0]}
+            pos={[count * step, 0]}
             z-index={2}
             size={[SIZE, SIZE]}
             opacity={0}

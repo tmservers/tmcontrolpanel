@@ -12,7 +12,9 @@ export type LabelTone =
   | "text"
   | "textMuted"
   | "contentText"
-  | "contentTextMuted";
+  | "contentTextMuted"
+  | "accent"
+  | "record";
 
 export interface LabelProps {
   tone: LabelTone;

@@ -3,6 +3,7 @@ export {
   Label,
   Panel,
   WindowFrame,
+  kit,
   type LabelProps,
   type LabelTone,
   type PanelProps,

@@ -9,9 +9,14 @@ export type ThemeTokens = {
     contentText: string;
     contentTextMuted: string;
     accent: string;
+    // Record highlights such as the world record label
+    record: string;
   };
   font: { body: string; title: string };
-  opacity: { panel: number };
+  // surface/content: fill opacity per tone pair; 1 keeps panels solid
+  opacity: { panel: number; surface: number; content: number };
+  // Corner radius and gap between joined panels, in manialink units
+  shape: { radius: number; gap: number };
 };
 
 // Same values as maniatsx's Anchor, so ThemeData passes to its ThemeProvider as is

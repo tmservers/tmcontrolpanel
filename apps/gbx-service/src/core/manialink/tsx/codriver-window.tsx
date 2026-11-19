@@ -1,4 +1,5 @@
 import { Manialink, Script, ms, type Vec2 } from "maniatsx";
+import { slot } from "maniatsx/theme";
 import { kit } from "./theme";
 import type { ManialinkPageProps } from "./types";
 import { Label, Panel } from "./ui";
@@ -41,7 +42,7 @@ interface ButtonProps {
 }
 
 // A muted button with a thin underline in the surface color
-function Button(props: ButtonProps) {
+function DefaultButton(props: ButtonProps) {
   const [w, h] = props.size;
   return (
     <frame
@@ -66,7 +67,7 @@ function Button(props: ButtonProps) {
   );
 }
 
-function Entry(props: { size: Vec2 }) {
+function DefaultEntry(props: { size: Vec2 }) {
   const { color, font } = kit.useTokens();
   return (
     <textedit
@@ -87,6 +88,89 @@ function Entry(props: { size: Vec2 }) {
   );
 }
 
+// Broadcast: a faint white fill on the see-through window, no underline
+function BroadcastButton(props: ButtonProps) {
+  const [w] = props.size;
+  return (
+    <frame
+      id={props.id}
+      pos={props.pos}
+      size={props.size}
+      hidden={props.hidden}
+    >
+      <quad
+        size={props.size}
+        bgcolor="FFF"
+        opacity={0.08}
+        action={props.action}
+      />
+      <Label
+        id={props.labelId}
+        tone="contentText"
+        font="body"
+        pos={[w / 2, props.labelY]}
+        text={props.text}
+        textsize={props.textsize ?? 1}
+        valign="center"
+        halign="center"
+      />
+    </frame>
+  );
+}
+
+const Button = slot<ButtonProps>("codriver/button", DefaultButton, {
+  broadcast: BroadcastButton,
+});
+
+// Broadcast: white text on a faint white fill instead of an opaque muted box
+function BroadcastEntry(props: { size: Vec2 }) {
+  const { color, font } = kit.useTokens();
+  return (
+    <textedit
+      pos={[0, 0]}
+      size={props.size}
+      name="codriver-entry"
+      id="codriver-entry"
+      default=""
+      autonewline
+      showlinenumbers={false}
+      textformat="Basic"
+      textsize={1}
+      focusareacolor1="FFF1"
+      focusareacolor2="FFF2"
+      textcolor={color.contentText}
+      textfont={font.body}
+    />
+  );
+}
+
+const Entry = slot<{ size: Vec2 }>("codriver/entry", DefaultEntry, {
+  broadcast: BroadcastEntry,
+});
+
+// Message bubbles: the script moves and sizes them by id, so each stays one quad
+function DefaultBubble(props: { id: string }) {
+  return <Panel id={props.id} tone="contentAlt" size={[1, 1]} hidden />;
+}
+
+// Broadcast: black on black would only darken the log, so bubbles get a faint white fill
+function BroadcastBubble(props: { id: string }) {
+  return (
+    <quad id={props.id} size={[1, 1]} bgcolor="FFF" opacity={0.06} hidden />
+  );
+}
+
+const Bubble = slot<{ id: string }>("codriver/bubble", DefaultBubble, {
+  broadcast: BroadcastBubble,
+});
+
+// The line under the text box; Broadcast drops it with the other borders
+const EntryUnderline = slot<{ pos: Vec2; size: Vec2 }>(
+  "codriver/entry-underline",
+  (props) => <Panel tone="surface" pos={props.pos} size={props.size} />,
+  { broadcast: () => null },
+);
+
 function Pools(props: { data: CodriverWindowData }) {
   const { width, bubbles, speakers, lines } = props.data;
   const range = (count: number) => Array.from({ length: count }, (_, i) => i);
@@ -101,12 +185,7 @@ function Pools(props: { data: CodriverWindowData }) {
         z-index={-1}
       />
       {range(bubbles).map((i) => (
-        <Panel
-          id={`codriver-bubble-${i}`}
-          tone="contentAlt"
-          size={[1, 1]}
-          hidden
-        />
+        <Bubble id={`codriver-bubble-${i}`} />
       ))}
       {range(speakers).map((i) => (
         <Label
@@ -366,8 +445,7 @@ export function CodriverWindowPage(props: ManialinkPageProps) {
 
         {/* Send and Clear stack beside the text box, together as tall as it */}
         <frame pos={[0, data.inputY]} size={[width, data.inputHeight]}>
-          <Panel
-            tone="surface"
+          <EntryUnderline
             pos={[0, 0.25 - data.inputHeight]}
             size={[width - 17, 0.25]}
           />

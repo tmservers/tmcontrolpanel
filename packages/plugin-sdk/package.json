@@ -9,6 +9,7 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./ui": "./src/ui/index.ts",
     "./cli": "./src/cli/index.ts"
   },
   "bin": {
@@ -21,8 +22,10 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@tmcontrolpanel/shared": "workspace:*",
     "esbuild": "^0.27.4",
     "fflate": "^0.8.3",
+    "maniatsx": "workspace:*",
     "zod": "^3.25.76"
   },
   "devDependencies": {

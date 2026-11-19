@@ -77,7 +77,9 @@ export interface WidgetOptions {
   // Unique within the plugin: letters, digits, - and _
   id: string;
   // A template of the package, without templates/ and .hbs: "widgets/board"
-  template: string;
+  template?: string;
+  component?: (props: WidgetRenderProps) => unknown;
+  updateComponent?: (props: WidgetRenderProps) => unknown;
   // Show to one player only
   login?: string;
   // Pair the page with "<template>-update" for data changes (default true)
@@ -88,6 +90,15 @@ export interface WidgetOptions {
   hideWhileDriving?: boolean;
   // Available as `data` in the template
   data?: unknown;
+}
+
+export interface WidgetRenderProps {
+  id: string;
+  position: Vector2;
+  size: Vector2;
+  title: string;
+  hideWhileDriving: boolean;
+  data: unknown;
 }
 
 export interface WindowOptions extends Omit<WidgetOptions, "login"> {
@@ -242,6 +253,10 @@ export interface PluginContext<Config = Record<string, unknown>> {
   readonly ui: {
     widget(options: WidgetOptions): Widget;
     window(options: WindowOptions): Window;
+    themeData(): import("@tmcontrolpanel/shared").ThemeData;
+    action(name: string): import("maniatsx/client").Action;
+    // Prefix the host adds to this plugin's action names
+    actionPrefix(): string;
     addButton(button: ActionButton): void;
     removeButton(name: string): void;
   };

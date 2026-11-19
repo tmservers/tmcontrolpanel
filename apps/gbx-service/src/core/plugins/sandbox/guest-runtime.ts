@@ -5,9 +5,16 @@ import type {
   PluginInstance,
   Widget,
   WidgetOptions,
+  WidgetRenderProps,
   Window,
   WindowOptions,
 } from "@tmcontrolpanel/plugin-sdk";
+
+// What reaches the guest after the plugin's bundled SDK turned `component` into `render`
+type PageOptions = (WidgetOptions | WindowOptions) & {
+  render?: (props: WidgetRenderProps) => string;
+  renderUpdate?: (props: WidgetRenderProps) => string;
+};
 
 // Runs inside the QuickJS sandbox, before the plugin's own code. The host serializes it with
 // Function.prototype.toString(), so it must not use anything from this module's scope.
@@ -87,6 +94,7 @@ export function guestRuntime(global: any): void {
 
   const info = call("init");
   const prefix: string = info.actionPrefix;
+  const themeData = info.themeData;
 
   // Templates render here, inside the sandbox, so a template can never reach the host
   const hb = Handlebars.create();
@@ -163,17 +171,18 @@ export function guestRuntime(global: any): void {
     definition = value;
   };
 
-  const makePage = (
-    kind: "widget" | "window",
-    options: WidgetOptions | WindowOptions,
-  ) => {
+  const makePage = (kind: "widget" | "window", options: PageOptions) => {
     if (!options || typeof options !== "object")
       throw new TypeError("Options are required");
     const onClose =
       kind === "window" ? (options as WindowOptions).onClose : undefined;
     const closeHandler =
       typeof onClose === "function" ? handler("window close", onClose) : null;
-    const withUpdate = options.withUpdate !== false;
+    // A component page has a data page only when it brings an update component
+    const withUpdate =
+      options.withUpdate !== false &&
+      (typeof options.render !== "function" ||
+        typeof options.renderUpdate === "function");
     const page = call("ui.create", kind, {
       id: options.id,
       login: options.login ?? null,
@@ -187,6 +196,14 @@ export function guestRuntime(global: any): void {
     let data = options.data;
     const hideWhileDriving = options.hideWhileDriving ?? false;
     const template = options.template;
+    const renderMain = options.render;
+    const renderUpdate = options.renderUpdate;
+    if ((options as { component?: unknown }).component !== undefined)
+      throw new TypeError(
+        'Component widgets need the UI kit: import "@tmcontrolpanel/plugin-sdk/ui" in the plugin',
+      );
+    if ((typeof template === "string") === (typeof renderMain === "function"))
+      throw new TypeError("Provide exactly one of template or render");
 
     const contextFor = () => ({
       id: page.id,
@@ -198,7 +215,13 @@ export function guestRuntime(global: any): void {
     });
     const updateXml = () =>
       withUpdate
-        ? render(`${template}-update`, { id: `${page.id}-update`, title, data })
+        ? typeof renderUpdate === "function"
+          ? renderUpdate({ ...contextFor(), id: `${page.id}-update` })
+          : render(`${template}-update`, {
+              id: `${page.id}-update`,
+              title,
+              data,
+            })
         : null;
 
     const result: Window = {
@@ -207,7 +230,9 @@ export function guestRuntime(global: any): void {
         call(
           "ui.show",
           page.handle,
-          render(template, contextFor()),
+          typeof renderMain === "function"
+            ? renderMain(contextFor())
+            : render(template!, contextFor()),
           updateXml(),
         );
       },
@@ -331,6 +356,9 @@ export function guestRuntime(global: any): void {
     ui: Object.freeze({
       widget: (options: WidgetOptions) => makePage("widget", options) as Widget,
       window: (options: WindowOptions) => makePage("window", options) as Window,
+      themeData: () => themeData,
+      // The plugin's action prefix, for actions triggered from compiled client code
+      actionPrefix: () => prefix,
       addButton: (button: ActionButton) => call("ui.addButton", button),
       removeButton: (name: string) => call("ui.removeButton", name),
     }),

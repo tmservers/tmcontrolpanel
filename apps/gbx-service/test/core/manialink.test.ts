@@ -1,5 +1,5 @@
 import { buildTable } from "@tmcontrolpanel/plugin-sdk";
-import { DEFAULT_THEME } from "@tmcontrolpanel/shared";
+import { DEFAULT_THEME, resolvePreset } from "@tmcontrolpanel/shared";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { ActionRouter } from "../../src/core/manialink/action-router";
@@ -13,6 +13,7 @@ import { flush } from "../fakes/clock";
 import { FakeGbxSession } from "../fakes/fake-gbx";
 import { testRenderer } from "../fakes/harness";
 import { silentLogger } from "../fakes/logger";
+import { ProbeWindow } from "../helpers/probe-pages";
 
 const TEMPLATES_DIR = fileURLToPath(
   new URL("../../templates", import.meta.url),
@@ -150,6 +151,79 @@ describe("ManialinkService", () => {
     expect(gbx.multicalls.at(-1)).toHaveLength(2);
   });
 
+  it("rerenders public and personal pages in one multicall", async () => {
+    const { gbx, manialinks } = setup();
+    manialinks.display(
+      "public",
+      "<old-public/>",
+      undefined,
+      () => "<new-public/>",
+    );
+    manialinks.display(
+      "personal",
+      "<old-personal/>",
+      "abc",
+      () => "<new-personal/>",
+    );
+
+    await manialinks.rerenderAll();
+
+    expect(gbx.multicalls).toHaveLength(1);
+    expect(gbx.multicalls[0]).toEqual([
+      ["SendDisplayManialinkPage", "<new-public/>", 0, false],
+      ["SendDisplayManialinkPageToLogin", "abc", "<new-personal/>", 0, false],
+    ]);
+  });
+
+  it("connects players with the updated XML", async () => {
+    const { gbx, manialinks } = setup();
+    manialinks.display("page", "<old/>", undefined, () => "<new/>");
+    await manialinks.rerenderAll();
+
+    await manialinks.onPlayerConnect("abc");
+
+    expect(gbx.multicalls.at(-1)).toEqual([
+      ["SendDisplayManialinkPageToLogin", "abc", "<new/>", 0, false],
+    ]);
+  });
+
+  it("resends pages without callbacks unchanged", async () => {
+    const { gbx, manialinks } = setup();
+    manialinks.display("page", "<same/>");
+
+    await manialinks.rerenderAll();
+
+    expect(gbx.multicalls.at(-1)).toEqual([
+      ["SendDisplayManialinkPage", "<same/>", 0, false],
+    ]);
+  });
+
+  it("does not send a destroyed page when rerendering", async () => {
+    const { gbx, manialinks } = setup();
+    manialinks.display("keep", "<keep/>");
+    manialinks.display("gone", "<gone/>", undefined, () => "<new-gone/>");
+    manialinks.destroy("gone");
+
+    await manialinks.rerenderAll();
+
+    expect(gbx.multicalls.at(-1)).toEqual([
+      ["SendDisplayManialinkPage", "<keep/>", 0, false],
+    ]);
+  });
+
+  it("keeps the previous XML when a rerender callback throws", async () => {
+    const { gbx, manialinks } = setup();
+    manialinks.display("page", "<old/>", undefined, () => {
+      throw new Error("render failed");
+    });
+
+    await manialinks.rerenderAll();
+
+    expect(gbx.multicalls.at(-1)).toEqual([
+      ["SendDisplayManialinkPage", "<old/>", 0, false],
+    ]);
+  });
+
   it("destroy removes the page from the remembered set", () => {
     const { manialinks } = setup();
     manialinks.display("a", "<a/>");
@@ -159,6 +233,36 @@ describe("ManialinkService", () => {
 });
 
 describe("components", () => {
+  it("rerenders a component page with the current theme", async () => {
+    const { gbx, deps, manialinks } = setup();
+    let theme = resolvePreset("default");
+    const page = new Manialink(
+      { ...deps, themeData: () => theme },
+      {
+        id: "themed-window",
+        component: ProbeWindow,
+        withUpdate: false,
+        title: "Theme",
+      },
+    );
+    page.display();
+    const originalXml = String(gbx.sent.at(-1)!.params[0]);
+    const updatedColor = "ABC";
+    theme = {
+      ...theme,
+      tokens: {
+        ...theme.tokens,
+        color: { ...theme.tokens.color, surface: updatedColor },
+      },
+    };
+
+    await manialinks.rerenderAll();
+
+    const rerenderedXml = String(gbx.multicalls.at(-1)![0][1]);
+    expect(rerenderedXml).not.toBe(originalXml);
+    expect(rerenderedXml).toContain(updatedColor);
+  });
+
   it("pairs a widget with its update page", () => {
     const { gbx, deps } = setup();
     const widget = new Manialink(deps, {

@@ -1,64 +1,50 @@
-import type { ManialinkTheme } from "@tmcontrolpanel/shared";
-import Flag from "react-world-flags";
+import { legacyManialinkTheme, resolvePreset } from "@tmcontrolpanel/shared";
 
-const css = (hex: string) => `#${hex}`;
-// One manialink unit in pixels
-const u = (units: number) => `${units * 5}px`;
-const rows = [
-  ["1", "Marijntje04", "12", "NL"],
-  ["2", "Speedy", "9", "BE"],
-  ["3", "Wirtual", "7", "NL"],
-  ["4", "Scrapie", "4", "FR"],
-];
+const px = (units: number) => `${units * 5}px`;
 
-// Mirrors the layout of the Live Ranking plugin widget
-export default function ManialinkThemePreview({
-  theme,
-}: {
-  theme: ManialinkTheme;
-}) {
+export default function ManialinkThemePreview({ preset }: { preset: string }) {
+  const theme = legacyManialinkTheme(resolvePreset(preset));
+  const tokens = resolvePreset(preset).tokens;
+  const rows = ["Marijntje04", "Speedy", "Wirtual"];
+
   return (
     <div
-      aria-label="Theme preview"
+      aria-label={`${preset} theme preview`}
       role="img"
       className="flex items-center justify-center overflow-hidden rounded-md bg-[linear-gradient(135deg,#4b6b8a,#1d2b3a)] p-6"
     >
-      <div className="flex flex-col" style={{ width: u(55), gap: u(0.25) }}>
+      <div
+        className="overflow-hidden rounded-sm shadow-lg"
+        style={{ width: px(55) }}
+      >
         <div
-          className="flex items-center justify-center text-xs font-semibold text-white"
-          style={{ height: u(5), backgroundColor: css(theme.quad.background) }}
+          className="px-3 py-2 text-xs font-semibold"
+          style={{
+            background: `#${theme.quad.background}`,
+            color: `#${theme.label.foreground}`,
+            fontFamily: tokens.font.title,
+          }}
         >
           Live Ranking
         </div>
-        {rows.map(([rank, name, points, country]) => (
-          <div key={rank} className="flex" style={{ height: u(5) }}>
-            <div
-              className="flex shrink-0 items-center justify-center text-xs font-semibold"
-              style={{
-                width: u(5),
-                backgroundColor: css(theme.quad.background),
-                color: css(theme.label.foreground),
-              }}
+        {rows.map((name, i) => (
+          <div
+            key={name}
+            className="flex items-center gap-2 px-3 py-2 text-xs"
+            style={{
+              background: `#${i % 2 ? theme.quad.backgroundMuted : theme.quad.foreground}`,
+              color: `#${theme.label.background}`,
+              fontFamily: tokens.font.body,
+            }}
+          >
+            <span
+              className="font-semibold"
+              style={{ color: `#${tokens.color.accent}` }}
             >
-              {rank}
-            </div>
-            <div
-              className="flex flex-1 items-center text-xs"
-              style={{
-                backgroundColor: css(theme.quad.foreground),
-                color: css(theme.label.background),
-                paddingLeft: u(1.25),
-                paddingRight: u(2),
-              }}
-            >
-              <Flag
-                code={country}
-                className="shrink-0 object-cover"
-                style={{ width: u(4.5), height: u(3) }}
-              />
-              <span className="ml-3 flex-1 truncate">{name}</span>
-              <span className="font-semibold">{points}</span>
-            </div>
+              {i + 1}
+            </span>
+            <span className="flex-1 truncate">{name}</span>
+            <span>{12 - i * 3} pts</span>
           </div>
         ))}
       </div>

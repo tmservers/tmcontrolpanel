@@ -71,6 +71,23 @@ const lastChatTo = (h: Harness) =>
 const WIDGET = `{{#extend "widget"}}{{#content "widget"}}<label text="{{ data.text }}" action="{{action "go"}}"/>{{/content}}{{/extend}}`;
 
 describe("sandboxed plugins", () => {
+  it("passes action args to sandboxed plugin handlers", async () => {
+    const h = await createHarness({
+      packages: [
+        {
+          bytes: testPackage(
+            `ctx.action("take", (_answer, params) => ctx.storage.set("args", params.args));`,
+          ),
+        },
+      ],
+      players: [player("p1")],
+    });
+
+    await h.click("p1", "test-plugin:take|alpha|beta|");
+
+    expect(stored(h, "args")).toEqual(["alpha", "beta", ""]);
+  });
+
   it("runs the example plugin end to end", async () => {
     const h = await createHarness({
       packages: [{ bytes: hello }],

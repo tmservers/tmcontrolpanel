@@ -1,3 +1,4 @@
+import { ActionGroupPage } from "../tsx/action-group";
 import { Manialink, ManialinkDeps } from "./manialink";
 
 export interface ActionButton {
@@ -11,7 +12,7 @@ export interface ActionButton {
 
 const WIDGET = {
   id: "action-group-widget",
-  template: "action-group",
+  component: ActionGroupPage,
   withUpdate: false,
   position: { x: -156, y: 85 },
 } as const;

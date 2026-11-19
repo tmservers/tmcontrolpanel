@@ -339,6 +339,97 @@ ctx.action("wave", (answer) => ctx.chat.sendTo(answer.login, "Hi!"));
 - **Theme.** Every template, including `-update` pages and inside `{{#each}}`, gets the panel's colors in two palettes, `@theme.quad.*` and `@theme.label.*`, each with `foreground`, `background`, `foregroundMuted` and `backgroundMuted`: three-digit hex without `#`, such as `DDD`. Pick the palette by element: every color attribute on a `<quad>` (`bgcolor`, `focusareacolor`) uses `quad`, and every color attribute on a `<label>` or `<entry>` (`textcolor`, `color`, `focusareacolor1`, `focusareacolor2`) uses `label`. In ManiaScript the same rule applies: `(x as CMlQuad).BgColor` uses `quad` and `(x as CMlLabel).TextColor` uses `label`. Use them instead of fixed colors, e.g. `bgcolor="{{ @theme.quad.background }}"` or `CL::Hex3ToRgb("{{ @theme.label.foreground }}")`, so plugins match the panel's windows. Declare `"sdk": 4` when you use them, so older panels refuse the plugin instead of rendering it without colors. Admins pick the colors in the **Theme** tab of a server's Plugins page, or per group under Admin, Groups. A server's own theme wins over its group's (the oldest group when several have one), then the default, `DDD`/`222`/`CCC`/`333` for both palettes. Plugins reload when the theme changes.
 - **Rules for pages.** A rendered page must be one `<manialink>` element with the page's own id, at most 128 KB. Pages that break this are refused with an error. Template helpers: `default`, `eq`, `bool`, `boolToNum`, `length`, `jsonLength`, `range`, `add`, `subtract`, `multiply`, `divide`, `action`, `actionPrefix`.
 
+## Writing widgets in TSX
+
+Instead of a Handlebars template, a widget or window can be a TSX component. The plugin's bundle renders it inside the sandbox, themed with the server's preset, and `tmcp-plugin build` compiles it, including any client code. Template plugins keep working unchanged.
+
+Name the entry `src/index.tsx` and import the SDK as usual. The UI kit and maniatsx come with the SDK, so a plugin project installs nothing extra.
+
+```tsx
+import { definePlugin, type WidgetRenderProps } from "@tmcontrolpanel/plugin-sdk";
+import { Label, Panel, WidgetFrame } from "@tmcontrolpanel/plugin-sdk/ui";
+import { Manialink } from "maniatsx";
+import { client, Publish, type Integer } from "maniatsx/client";
+
+interface Score {
+  points: Integer;
+}
+
+// Written by the update page, read by the main page
+const score = client.shared<Score>("score", { points: 0 });
+
+export default definePlugin({
+  create(ctx) {
+    function Board(props: WidgetRenderProps) {
+      return (
+        <WidgetFrame {...props}>
+          <Panel tone="surface" size={[40, 10]} />
+          <Label tone="text" pos={[2, -2]} text={client.bind(() => `${score.value.points}`)} />
+        </WidgetFrame>
+      );
+    }
+
+    function BoardUpdate(props: WidgetRenderProps) {
+      const data = props.data as { points: number };
+      return (
+        <Manialink id={props.id}>
+          <Publish to={score} value={{ points: data.points }} />
+        </Manialink>
+      );
+    }
+
+    return {
+      start() {
+        ctx.ui.widget({ id: "board", component: Board, updateComponent: BoardUpdate, data: { points: 0 } }).display();
+      },
+    };
+  },
+});
+```
+
+### Components
+
+- `ctx.ui.widget({ component, updateComponent?, ... })` and `ctx.ui.window({ component, ... })` take a component instead of `template`. Passing both is an error.
+- A component receives `{ id, position, size, title, hideWhileDriving, data }` and returns a whole page. Wrap a widget in `<WidgetFrame {...props}>`: it places the content at `position`, reveals it after load and hides it while driving when `hideWhileDriving` is set, like template widgets. Update components only carry data, so a bare `<Manialink id={props.id}>` is enough there.
+- `updateComponent` renders the small `-update` page that `widget.update()` re-sends. Publish new data from it with `client.shared` and `<Publish>`; the main page reads `shared.value` in bindings and `client.watch`, and keeps its own client state.
+
+### Theming
+
+- `@tmcontrolpanel/plugin-sdk/ui` exports `WidgetFrame`, `Page`, `Panel`, `Label`, `Table` and `WindowFrame`. They take a `tone` that maps to the preset's tokens (`surface`, `content`, `text`, `textMuted`, ...), so a preset restyles your widget without changes on your side.
+- `kit.useTokens()` gives the raw tokens (`color`, `font`, `opacity`) for anything the primitives don't cover. `ctx.ui.themeData()` returns the whole preset.
+- The primitives are maniatsx slots: future presets can ship their own look for them, and your widget picks it up.
+
+### Client code
+
+Client code is TypeScript that runs in the game, compiled to ManiaScript at build time: `client.state`, `client.bind`, `client.handler` (for `onClick` and friends), `client.ref`, `client.shared`, `client.watch`, `client.onInit` and `client.onFrame`. It is a strict subset: numbers must be typed `Integer` or `Real`, there are no classes, closures, async code or try/catch, and only game API methods can be called. The build reports anything outside the subset with a file, line and a suggested fix.
+
+Storage keys of `client.shared` and persisted `client.state` are prefixed with your plugin's slug automatically. The game keeps that storage after a page is gone and shares it between all pages, so the prefix keeps plugins from reading each other's values.
+
+### Actions
+
+`ctx.ui.action(name)` returns an action with your plugin's prefix. Call `.trigger(...args)` from client code; your `ctx.action(name, handler)` receives the arguments as `params.args`.
+
+```tsx
+const pick = ctx.ui.action("pick");
+ctx.action("pick", (answer, params) => ctx.chat.sendTo(answer.Login, `Picked ${params.args[0]}`));
+// in a component:
+<quad size={[6, 6]} onClick={client.handler(() => pick.trigger("42"))} />
+```
+
+Arguments are joined with `|` and not escaped, so an argument must not contain `|`.
+
+### Game pitfalls
+
+Valid XML is not the same as a page that looks right. Things that are easy to get wrong:
+
+- **Fonts:** use `GameFontRegular`, `GameFontSemiBold`, `GameFontExtraBold` or `GameFontBlack`. Unknown names silently fall back to the default font.
+- **Text size:** `textsize` is not linear. The font is about 10.5 + 6 × textsize px at 1080p, so small text is larger than you expect.
+- **Label width:** a label squeezes its text horizontally to fit its `size`, without an ellipsis or a warning.
+- **Right alignment:** `halign="right"` makes `pos` the right edge of the label.
+- **Clipping:** frames clip their children to the frame's `size`. Position nested content relative to its own frame.
+- **Colors:** use `textcolor` on labels; `color` is ignored.
+- **Storage:** `for This` / `for Page` storage survives re-sends and outlives the layer, so don't assume a fresh start.
+
 ## Settings
 
 `configSchema` describes the settings form admins fill in on the server's Plugins page. It is a small subset of JSON Schema: an object whose `properties` are at most 50 fields. Property names start with a letter and continue with letters, digits or `_`, up to 64 characters, so `my-key` is not allowed. Keywords that aren't listed below, such as `pattern`, make the manifest invalid.

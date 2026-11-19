@@ -5,7 +5,7 @@ import { ModalContent } from "@/components/modals/modal";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ThemeForm from "@/forms/theme/theme-form";
 import type { GroupsWithUsersWithServers } from "@/services/database/groups";
-import { DEFAULT_THEME, parseTheme } from "@tmcontrolpanel/shared";
+import { DEFAULT_PRESET_ID, parseThemeSetting } from "@tmcontrolpanel/shared";
 import { DefaultModalProps } from "../default-props";
 
 export default function EditGroupThemeModal({
@@ -24,9 +24,10 @@ export default function EditGroupThemeModal({
         The group&apos;s servers use this theme unless they have their own.
       </p>
       <ThemeForm
-        theme={parseTheme(data.theme)}
-        inherited={DEFAULT_THEME}
+        theme={parseThemeSetting(data.theme)}
+        inherited={DEFAULT_PRESET_ID}
         inheritedLabel="the default theme"
+        allowInherit
         onSave={(theme) => updateGroupTheme(data.id, theme)}
         callback={() => {
           onSubmit?.();

@@ -1,13 +1,20 @@
+import { build } from "esbuild";
+import { maniatsxEsbuildPlugin } from "maniatsx/esbuild-plugin";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { build } from "esbuild";
-import { CliError, distEntry, findSource, readProjectManifest } from "./project";
+import {
+  CliError,
+  distEntry,
+  findSource,
+  readProjectManifest,
+} from "./project";
 
 // This package's own entry (src/index.ts here, dist/index.js once built), so plugins always
 // bundle the definePlugin() of the CLI that builds them
-function sdkEntry(): string | undefined {
-  return ["../index.ts", "./index.js"]
+// The SDK entry (or its ui entry) next to this CLI, from source or from the built dist
+function sdkEntry(sub = ""): string | undefined {
+  return [`..${sub}/index.ts`, `.${sub}/index.js`]
     .map((path) => fileURLToPath(new URL(path, import.meta.url)))
     .find(existsSync);
 }
@@ -25,6 +32,7 @@ export async function buildPlugin(
 ): Promise<BuildResult> {
   const manifest = readProjectManifest(dir);
   const source = findSource(dir);
+  const pluginId = manifest.slug;
   const outFile = distEntry(dir, manifest, options.outDir);
 
   const result = await build({
@@ -40,13 +48,44 @@ export async function buildPlugin(
     legalComments: "inline",
     logLevel: "silent",
     charset: "utf8",
-    alias: sdkEntry() ? { "@tmcontrolpanel/plugin-sdk": sdkEntry()! } : {},
-  }).catch((error: { errors?: { text: string; location?: { file: string; line: number } | null }[] }) => {
-    const messages = (error.errors ?? []).map(
-      (e) => `${e.location ? `${e.location.file}:${e.location.line}: ` : ""}${e.text}`,
-    );
-    throw new CliError(`Build failed:\n  ${messages.join("\n  ") || String(error)}`);
-  });
+    jsx: "automatic",
+    jsxImportSource: "maniatsx",
+    plugins: [
+      // Plugin projects don't install maniatsx: resolve it (and its subpaths) from the SDK
+      {
+        name: "sdk-maniatsx",
+        setup(b) {
+          b.onResolve({ filter: /^maniatsx(\/|$)/ }, (args) => ({
+            path: fileURLToPath(import.meta.resolve(args.path)),
+          }));
+          // The SDK bundles itself, so plugins always get this SDK's runtime and UI kit
+          b.onResolve(
+            { filter: /^@tmcontrolpanel\/plugin-sdk(\/ui)?$/ },
+            (args) => {
+              const path = sdkEntry(args.path.endsWith("/ui") ? "/ui" : "");
+              return path ? { path } : undefined;
+            },
+          );
+        },
+      },
+      maniatsxEsbuildPlugin({ rootDir: dir, keyPrefix: `${pluginId}.` }),
+    ],
+  }).catch(
+    (error: {
+      errors?: {
+        text: string;
+        location?: { file: string; line: number } | null;
+      }[];
+    }) => {
+      const messages = (error.errors ?? []).map(
+        (e) =>
+          `${e.location ? `${e.location.file}:${e.location.line}: ` : ""}${e.text}`,
+      );
+      throw new CliError(
+        `Build failed:\n  ${messages.join("\n  ") || String(error)}`,
+      );
+    },
+  );
 
   const output = result.outputFiles?.[0];
   if (!output) throw new CliError("Build produced no output");

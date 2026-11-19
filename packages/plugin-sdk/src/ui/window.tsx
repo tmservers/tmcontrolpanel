@@ -40,7 +40,7 @@ export const WindowFrame = slot<WindowFrameProps>("ui/window", (props) => {
         textsize={1}
       />
       <Label
-        tone="contentText"
+        tone="text"
         pos={[width - 1.5, -2.25]}
         text={CLOSE_ICON}
         size={[5, 5]}

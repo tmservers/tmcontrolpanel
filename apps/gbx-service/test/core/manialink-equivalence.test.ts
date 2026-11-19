@@ -57,8 +57,20 @@ interface Expected {
   labelColor?: boolean;
 }
 
+// The game ignored the legacy close icon's `color`, so the TSX page gives it the title's color
+function closeIconLikeTitle(hbs: string): string {
+  const title =
+    /<label [^>]*color="(\w+)"[^>]*textfont="GameFontSemiBold"/.exec(hbs)?.[1];
+  if (!title) return hbs;
+  return hbs.replace(
+    /(<label [^>]*?)color="\w+"([^>]*action="close-window-)/,
+    `$1color="${title}"$2`,
+  );
+}
+
 // Renders both versions with the Default theme and compares structure, attribute values and script statements
 function expectEquivalent(hbs: string, tsx: string, expected: Expected = {}) {
+  if (expected.labelColor) hbs = closeIconLikeTitle(hbs);
   const a = normalizeXml(hbs, {
     renameAttrs: expected.labelColor ? { label: { color: "textcolor" } } : {},
   });

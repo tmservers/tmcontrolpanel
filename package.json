@@ -23,7 +23,6 @@
     "migrate:create": "bun --env-file=.env run --filter @tmcontrolpanel/db migrate:create",
     "deploy": "bun --env-file=.env run --filter @tmcontrolpanel/db deploy",
     "reset": "bun --env-file=.env run --filter @tmcontrolpanel/db reset",
-    "sync:maniatsx": "bun scripts/sync-maniatsx.ts",
     "pretty": "prettier --write \"**/*.{ts,tsx,json,css}\"",
     "encrypt:server-credentials": "bun --env-file=.env scripts/encrypt-server-credentials.ts",
     "rotate:encryption-keys": "bun scripts/rotate-encryption-keys.ts"

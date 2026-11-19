@@ -1,6 +1,7 @@
 **/node_modules
 **/.next
 **/dist
+!packages/maniatsx/dist
 **/coverage
 **/.env
 **/.env.*

@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource maniatsx */
 import { Manialink, Script, type Node } from "maniatsx";
 
 export interface PageProps {

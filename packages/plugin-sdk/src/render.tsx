@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource maniatsx */
 import type { ThemeData } from "@tmcontrolpanel/shared";
 import { render, type Node } from "maniatsx";
 import { kit, toKitTheme } from "./ui/theme";

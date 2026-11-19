@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource maniatsx */
 import { Script, type Node, type Vec2 } from "maniatsx";
 import { Page, ScriptPrelude } from "./page";
 import { HideWhileDriving } from "./widget-hide";

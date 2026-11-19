@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource maniatsx */
 import type { Vec2 } from "maniatsx";
 import type { ClientBinding } from "maniatsx/client";
 import { slot } from "maniatsx/theme";

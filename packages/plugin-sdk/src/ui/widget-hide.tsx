@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource maniatsx */
 import { Script, ms } from "maniatsx";
 
 export interface HideWhileDrivingProps {

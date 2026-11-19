@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource maniatsx */
 import type { Node, Vec2 } from "maniatsx";
 import { slot } from "maniatsx/theme";
 import { Label } from "./label";

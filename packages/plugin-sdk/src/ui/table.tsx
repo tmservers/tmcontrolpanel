@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource maniatsx */
 import { slot } from "maniatsx/theme";
 import type { Table } from "../helpers";
 import { Label } from "./label";

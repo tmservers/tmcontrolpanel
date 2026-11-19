@@ -1597,6 +1597,12 @@ export class Lowerer {
         const one = () => this.val(node.arguments[0], elem);
         if (name === "push" && argc === 1)
             return { items: [...r, ".add(", ...one().items, ")"], ty: "Void", prec: ATOM };
+        // ManiaScript's exists/keyof only search arrays of plain values
+        if ((name === "includes" || name === "indexOf") &&
+            argc === 1 &&
+            typeof elem === "object" &&
+            ("struct" in elem || "array" in elem || "record" in elem))
+            return this.bad(node, "array-search", `\`.${name}\` on an array of structs or arrays`, "Loop over the array and compare a field instead.");
         if (name === "includes" && argc === 1)
             return { items: [...r, ".exists(", ...one().items, ")"], ty: "Boolean", prec: ATOM };
         if (name === "indexOf" && argc === 1)

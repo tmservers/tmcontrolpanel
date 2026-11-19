@@ -247,6 +247,9 @@ export class Analyzer {
             if (own.name === "Action" || own.name === "ClientAction")
                 return "Action";
         }
+        // Inferred vectors (e.g. a function returning vec3()) keep the interface, not the alias name
+        if (own && ownDecl && inTypes(ownDecl) && ["Vec2", "Vec3", "Int2", "Int3"].includes(own.name))
+            return own.name;
         const f = type.flags;
         if (f & ts.TypeFlags.BooleanLike)
             return "Boolean";

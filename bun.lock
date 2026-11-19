@@ -26,7 +26,7 @@
         "handlebars": "^4.7.10",
         "handlebars-layouts": "^3.1.4",
         "ioredis": "^5.6.1",
-        "maniatsx": "workspace:*",
+        "maniatsx": "^0.1.1",
         "pino": "^10.3.1",
         "quickjs-emscripten-core": "0.32.0",
         "slugid": "^5.0.1",
@@ -161,13 +161,6 @@
         "typescript": "^5",
       },
     },
-    "packages/maniatsx": {
-      "name": "maniatsx",
-      "version": "0.1.0",
-      "dependencies": {
-        "typescript6": "npm:typescript@6.0.3",
-      },
-    },
     "packages/plugin-sdk": {
       "name": "@tmcontrolpanel/plugin-sdk",
       "version": "0.1.0",
@@ -175,8 +168,10 @@
         "tmcp-plugin": "./dist/cli.js",
       },
       "dependencies": {
+        "@tmcontrolpanel/shared": "workspace:*",
         "esbuild": "^0.27.4",
         "fflate": "^0.8.3",
+        "maniatsx": "^0.1.1",
         "zod": "^3.25.76",
       },
       "devDependencies": {
@@ -1962,7 +1957,7 @@
 
     "magic-string": ["magic-string@1.4.2", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.6.0" } }, "sha512-vG+rjFRj1PqdIBozIxAGMjPlOhaVe+GXpbttY/iSK7rGcJRMlwNJO7dcUwmUqkymsFLJiNGI06t4D7Fr7yRC9g=="],
 
-    "maniatsx": ["maniatsx@workspace:packages/maniatsx"],
+    "maniatsx": ["maniatsx@0.1.1", "", { "dependencies": { "typescript6": "npm:typescript@6.0.3" }, "bin": { "maniatsx": "bin/maniatsx.js", "maniatsx-compile": "bin/maniatsx-compile.js" } }, "sha512-HC7D34D4C3EMeGibckcoU1L6Nwyz4Uldl7zhYAmG+1cpUAjfnmIM/LP4/YL4XrYKdk2CwpGTKCzTipmODOwTPQ=="],
 
     "markdown-table": ["markdown-table@3.0.4", "", {}, "sha512-wiYz4+JrLyb/DqW2hkFJxP7Vd7JuTDm77fvbM8VfEQdmSMqcImWeeRbHwZjBjIFki/VaMK2BhFi7oUUZeM5bqw=="],
 

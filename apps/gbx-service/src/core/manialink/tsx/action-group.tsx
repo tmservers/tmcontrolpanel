@@ -23,7 +23,7 @@ export function ActionGroupPage(props: ManialinkPageProps) {
       hideWhileDriving={props.hideWhileDriving}
     >
       <Script.Main id="action-group">
-        {"declare Boolean actionGroupIsOpen = false for This;"}
+        {"declare Boolean actionGroupIsOpen for This = False;"}
       </Script.Main>
       <Script.Events id="action-group">{ms`
         if (Event.Control.HasClass("trigger") && Event.Type == CMlScriptEvent::Type::MouseClick) {

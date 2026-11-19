@@ -152,7 +152,7 @@ describe("TSX pages match their Handlebars versions (Default theme)", () => {
     expectEquivalent(
       renderer.render("action-group", page),
       renderComponent(ActionGroupPage, page),
-      { onlyTsx: ["declare Boolean actionGroupIsOpen = false for This;"] },
+      { onlyTsx: ["declare Boolean actionGroupIsOpen for This = False;"] },
     );
   });
 

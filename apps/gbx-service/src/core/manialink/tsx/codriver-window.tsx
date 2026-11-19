@@ -25,7 +25,7 @@ const ICON_DISCARD = " Discard";
 const ICON_SEND = " Send";
 const ICON_CLEAR = " Clear";
 const EXPERIMENTAL_HINT =
-  "Experimental: Codriver can make mistakes. Try “status” or “skip this map”. Disruptive changes ask for confirmation.";
+  "Experimental: Codriver can make mistakes. Try “status” or “skip this map”.\nDisruptive changes ask for confirmation.";
 
 interface ButtonProps {
   id?: string;
@@ -283,8 +283,8 @@ export function CodriverWindowPage(props: ManialinkPageProps) {
           <Label
             tone="contentTextMuted"
             font="body"
-            pos={[0, -2.25]}
-            size={[width, 5]}
+            pos={[0, -4]}
+            size={[width, 8]}
             text={EXPERIMENTAL_HINT}
             textsize={1}
             valign="center"

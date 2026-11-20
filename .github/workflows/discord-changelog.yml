@@ -2,21 +2,41 @@ name: Send Release Notes to Discord
 
 on:
   workflow_call:
-  
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to post, for example v1.1.0
+        required: true
+
 jobs:
   post-discord-changelog:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Read the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+          EVENT_TAG: ${{ github.event.release.tag_name }}
+          EVENT_NAME: ${{ github.event.release.name }}
+          EVENT_BODY: ${{ github.event.release.body }}
+        run: |
+          # Manual runs read the release by tag, release events use their payload
+          if [ -n "$TAG" ]; then
+            gh release view "$TAG" -R "$GITHUB_REPOSITORY" --json tagName,name,body > release.json
+          else
+            jq -n --arg tagName "$EVENT_TAG" --arg name "$EVENT_NAME" --arg body "$EVENT_BODY" \
+              '{tagName: $tagName, name: $name, body: $body}' > release.json
+          fi
+
       - name: Send release notes to Discord
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_CHANGELOG_WEBHOOK_URL }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-          RELEASE_NAME: ${{ github.event.release.name }}
-          RELEASE_BODY: ${{ github.event.release.body }}
         run: |
+          RELEASE_TAG=$(jq -r .tagName release.json)
+          RELEASE_NAME=$(jq -r .name release.json)
           # Escape quotes and newlines for JSON
-          SANITIZED_BODY=$(echo "$RELEASE_BODY" | jq -Rsa .)
+          SANITIZED_BODY=$(jq .body release.json)
 
           curl -X POST "$DISCORD_WEBHOOK_URL" \
             -H "Content-Type: application/json" \

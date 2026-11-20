@@ -396,7 +396,8 @@ export default definePlugin({
 ### Theming
 
 - `@tmcontrolpanel/plugin-sdk/ui` exports `WidgetFrame`, `Page`, `Panel`, `Label`, `Table` and `WindowFrame`. They take a `tone` that maps to the preset's tokens (`surface`, `content`, `text`, `textMuted`, ...), so a preset restyles your widget without changes on your side.
-- `kit.useTokens()` gives the raw tokens (`color`, `font`, `opacity`) for anything the primitives don't cover. `ctx.ui.themeData()` returns the whole preset.
+- `Panel` accepts `corners="all" | "none" | "left" | "right" | "top" | "bottom"` to choose rounded edges. It uses a plain quad when the radius is zero, corners are disabled, a client binding or script-facing attribute prevents framing, or the panel is smaller than twice the radius.
+- `kit.useTokens()` gives the raw `color` (including `accent` and `record`, also usable as `Label` tones), `font`, `opacity.surface`/`opacity.content`, and `shape.radius`/`shape.gap` tokens for anything the primitives don't cover. `ctx.ui.themeData()` returns the whole preset. Available presets include **Default** and **Broadcast**.
 - The primitives are maniatsx slots: future presets can ship their own look for them, and your widget picks it up.
 
 ### Client code

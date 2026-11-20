@@ -3,6 +3,7 @@ import {
   DEFAULT_PRESET_ID,
   DEFAULT_THEME,
   legacyManialinkTheme,
+  listThemePresets,
   parseTheme,
   parseThemeSetting,
   resolvePreset,
@@ -48,6 +49,21 @@ describe("manialink themes", () => {
 });
 
 describe("theme presets", () => {
+  it("lists and resolves the broadcast preset over the default", () => {
+    expect(listThemePresets()).toContainEqual({
+      id: "broadcast",
+      name: "Broadcast",
+    });
+    const broadcast = resolvePreset("broadcast");
+    expect(broadcast.chain).toEqual(["broadcast", "default"]);
+    expect(broadcast.tokens.color.record).toBe("EB4");
+    expect(broadcast.tokens.color.surface).toBe("000");
+    expect(broadcast.tokens.shape.radius).toBe(0);
+    expect(broadcast.tokens.opacity.content).toBe(0.72);
+    expect(broadcast.tokens.font.title).toBe("Oswald");
+    expect(parseThemeSetting({ preset: "broadcast" })).toBe("broadcast");
+  });
+
   it("resolves the default preset and falls back for unknown ids", () => {
     expect(resolvePreset(DEFAULT_PRESET_ID)).toMatchObject({
       id: "default",
@@ -66,7 +82,8 @@ describe("theme presets", () => {
           accent: "DDD",
         },
         font: { body: "GameFontRegular", title: "GameFontSemiBold" },
-        opacity: { panel: 0.85 },
+        opacity: { panel: 0.85, surface: 1, content: 1 },
+        shape: { radius: 0, gap: 0 },
       },
     });
     expect(resolvePreset("missing")).toEqual(resolvePreset("default"));

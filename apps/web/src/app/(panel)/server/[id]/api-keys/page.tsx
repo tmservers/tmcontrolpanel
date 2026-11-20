@@ -17,16 +17,6 @@ export default async function ServerApiKeysPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold">API Keys</h1>
-        <h4 className="text-muted-foreground">
-          Keys let other tools use this server through the{" "}
-          <a href={routes.apiDocs} className="underline">
-            public API
-          </a>
-          . A key stops working when its creator is no longer an admin here.
-        </h4>
-      </div>
       <ServerApiKeys serverId={id} />
     </div>
   );

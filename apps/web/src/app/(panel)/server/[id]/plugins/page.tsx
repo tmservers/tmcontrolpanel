@@ -45,14 +45,6 @@ export default async function ServerPluginsPage({
 
   return (
     <div className="flex flex-col gap-6 h-full">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold">Manage Plugins</h1>
-        <h4 className="text-muted-foreground">
-          Manage the plugins of the server, and configure the chat settings and
-          the theme of plugin widgets.
-        </h4>
-      </div>
-
       <Tabs defaultValue="plugins" className="w-full">
         <TabsList className="w-full">
           <TabsTrigger value="plugins">Plugins</TabsTrigger>

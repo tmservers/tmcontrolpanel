@@ -26,8 +26,20 @@ const MAX_PACKAGE_BYTES = 5 * 1024 * 1024;
 
 const meta = { type: "marketplace", module: "marketplace" };
 
-let cached: { index: MarketplaceIndex; at: number } | null = null;
-const readmes = new Map<string, { text: string | null; at: number }>();
+// On globalThis: Server Actions and page renders load separate copies of this module,
+// so "check for updates" must refresh the cache the pages read.
+const store = ((
+  globalThis as { __tmcpMarketplace?: MarketplaceStore }
+).__tmcpMarketplace ??= {
+  cached: null,
+  readmes: new Map(),
+});
+const readmes = store.readmes;
+
+interface MarketplaceStore {
+  cached: { index: MarketplaceIndex; at: number } | null;
+  readmes: Map<string, { text: string | null; at: number }>;
+}
 
 export class MarketplaceError extends Error {
   constructor(message: string) {
@@ -65,10 +77,16 @@ async function fetchLimited(
 }
 
 // The cached index, refreshed every few minutes. A failed refresh keeps serving the last copy.
-export async function getMarketplaceIndex(): Promise<MarketplaceIndex | null> {
+// `force` skips the cache, for an admin checking for updates right away.
+export async function getMarketplaceIndex(
+  force = false,
+): Promise<MarketplaceIndex | null> {
   const url = marketplaceIndexUrl();
   if (!url) return null;
-  if (cached && Date.now() - cached.at < INDEX_TTL_MS) return cached.index;
+  const cached = store.cached;
+  if (!force && cached && Date.now() - cached.at < INDEX_TTL_MS) {
+    return cached.index;
+  }
 
   try {
     const bytes = await fetchLimited(url, MAX_INDEX_BYTES, 15_000);
@@ -81,14 +99,14 @@ export async function getMarketplaceIndex(): Promise<MarketplaceIndex | null> {
         "Skipped invalid marketplace entries",
       );
     }
-    cached = { index, at: Date.now() };
+    store.cached = { index, at: Date.now() };
     return index;
   } catch (error) {
     logger.error(
       { meta: { ...meta, function: "getMarketplaceIndex" }, error },
       "Failed to load the marketplace",
     );
-    if (cached) return cached.index;
+    if (store.cached) return store.cached.index;
     throw error instanceof MarketplaceError
       ? error
       : new MarketplaceError(
@@ -170,6 +188,6 @@ export async function downloadMarketplacePackage(
 
 // For tests
 export function clearMarketplaceCache(): void {
-  cached = null;
+  store.cached = null;
   readmes.clear();
 }

@@ -1,17 +1,17 @@
 import { zipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import {
-  createPluginPackage,
-  PluginPackageError,
-  readPluginPackage,
-  sha256Hex,
-} from "../src/plugins/package";
-import {
   latestVersion,
   parseMarketplaceIndex,
   resolveMarketplaceUrl,
   type MarketplacePlugin,
 } from "../src/plugins";
+import {
+  createPluginPackage,
+  PluginPackageError,
+  readPluginPackage,
+  sha256Hex,
+} from "../src/plugins/package";
 
 const manifest = {
   slug: "hello-world",
@@ -23,16 +23,20 @@ const manifest = {
   capabilities: ["ui"],
 };
 
-function files(overrides: Record<string, string | Uint8Array | undefined> = {}) {
+function files(
+  overrides: Record<string, string | Uint8Array | undefined> = {},
+) {
   const base: Record<string, string | Uint8Array | undefined> = {
     "tmcp-plugin.json": JSON.stringify(manifest),
     "index.js": "definePlugin({ create() { return {}; } });",
-    "templates/widgets/board.hbs": "{{#extend \"widget\"}}{{/extend}}",
+    "templates/widgets/board.hbs": '{{#extend "widget"}}{{/extend}}',
     "README.md": "# Hello",
     ...overrides,
   };
   return Object.fromEntries(
-    Object.entries(base).filter((entry): entry is [string, string | Uint8Array] => !!entry[1]),
+    Object.entries(base).filter(
+      (entry): entry is [string, string | Uint8Array] => !!entry[1],
+    ),
   );
 }
 
@@ -60,41 +64,71 @@ describe("plugin packages", () => {
   });
 
   it("packs deterministically", () => {
-    expect(sha256Hex(createPluginPackage(files()))).toBe(sha256Hex(createPluginPackage(files())));
+    expect(sha256Hex(createPluginPackage(files()))).toBe(
+      sha256Hex(createPluginPackage(files())),
+    );
   });
 
   it("accepts a zip with everything in one folder", () => {
     const nested = Object.fromEntries(
-      Object.entries(files()).map(([name, content]) => [`hello/${name}`, content]),
+      Object.entries(files()).map(([name, content]) => [
+        `hello/${name}`,
+        content,
+      ]),
     );
-    expect(readPluginPackage(createPluginPackage(nested)).manifest.slug).toBe("hello-world");
+    expect(readPluginPackage(createPluginPackage(nested)).manifest.slug).toBe(
+      "hello-world",
+    );
   });
 
   it("ignores dotfiles and macOS metadata", () => {
     const pkg = readPluginPackage(
-      createPluginPackage(files({ ".DS_Store": "x", "__MACOSX/._index.js": "x" })),
+      createPluginPackage(
+        files({ ".DS_Store": "x", "__MACOSX/._index.js": "x" }),
+      ),
     );
     expect(pkg.manifest.slug).toBe("hello-world");
   });
 
   it("rejects broken packages", () => {
     expectIssue(new Uint8Array([1, 2, 3]), /Not a valid zip/);
-    expectIssue(createPluginPackage(files({ "tmcp-plugin.json": undefined })), /tmcp-plugin.json is missing/);
-    expectIssue(createPluginPackage(files({ "tmcp-plugin.json": "{nope" })), /not valid JSON/);
-    expectIssue(createPluginPackage(files({ "index.js": undefined })), /Entry file index.js is missing/);
     expectIssue(
-      createPluginPackage(files({ "index.js": new Uint8Array([0xff, 0xfe, 0x00]) })),
+      createPluginPackage(files({ "tmcp-plugin.json": undefined })),
+      /tmcp-plugin.json is missing/,
+    );
+    expectIssue(
+      createPluginPackage(files({ "tmcp-plugin.json": "{nope" })),
+      /not valid JSON/,
+    );
+    expectIssue(
+      createPluginPackage(files({ "index.js": undefined })),
+      /Entry file index.js is missing/,
+    );
+    expectIssue(
+      createPluginPackage(
+        files({ "index.js": new Uint8Array([0xff, 0xfe, 0x00]) }),
+      ),
       /not valid UTF-8/,
     );
     expectIssue(
       createPluginPackage(files({ "templates/widget.hbs": "x" })),
       /would replace a built-in layout/,
     );
-    expectIssue(createPluginPackage(files({ "icon.png": "not a png" })), /icon.png must be a PNG/);
+    expectIssue(
+      createPluginPackage(files({ "templates/components/table.hbs": "x" })),
+      /would replace a built-in layout/,
+    );
+    expectIssue(
+      createPluginPackage(files({ "icon.png": "not a png" })),
+      /icon.png must be a PNG/,
+    );
   });
 
   it("rejects paths that leave the package", () => {
-    const zip = zipSync({ "tmcp-plugin.json": new TextEncoder().encode(JSON.stringify(manifest)), "../evil.js": new Uint8Array([1]) });
+    const zip = zipSync({
+      "tmcp-plugin.json": new TextEncoder().encode(JSON.stringify(manifest)),
+      "../evil.js": new Uint8Array([1]),
+    });
     expectIssue(zip, /Path leaves the package/);
   });
 
@@ -108,13 +142,17 @@ describe("plugin packages", () => {
     const view = new DataView(zip.buffer, zip.byteOffset, zip.byteLength);
     view.setUint32(22, 1024, true);
     for (let i = 0; i < zip.length - 4; i++) {
-      if (view.getUint32(i, true) === 0x02014b50) view.setUint32(i + 24, 1024, true);
+      if (view.getUint32(i, true) === 0x02014b50)
+        view.setUint32(i + 24, 1024, true);
     }
     expectIssue(zip, /not valid JSON/);
   });
 });
 
-const version = (v: string, extra: Partial<MarketplacePlugin["versions"][number]> = {}) => ({
+const version = (
+  v: string,
+  extra: Partial<MarketplacePlugin["versions"][number]> = {},
+) => ({
   version: v,
   sdk: 1,
   url: `packages/hello/hello-${v}.zip`,
@@ -144,7 +182,13 @@ describe("marketplace index", () => {
         ],
       },
       { slug: "Bad Slug", name: "x" },
-      { slug: "hello", name: "Duplicate", description: "x", author: "x", versions: [version("1.0.0")] },
+      {
+        slug: "hello",
+        name: "Duplicate",
+        description: "x",
+        author: "x",
+        versions: [version("1.0.0")],
+      },
     ],
   };
 
@@ -172,10 +216,12 @@ describe("marketplace index", () => {
     expect(resolveMarketplaceUrl(indexUrl, "packages/a.zip")).toBe(
       "https://acme.github.io/plugins/packages/a.zip",
     );
-    expect(resolveMarketplaceUrl(indexUrl, "https://acme.github.io/other/a.zip")).toBe(
-      "https://acme.github.io/other/a.zip",
-    );
-    expect(resolveMarketplaceUrl(indexUrl, "https://evil.example/a.zip")).toBeNull();
+    expect(
+      resolveMarketplaceUrl(indexUrl, "https://acme.github.io/other/a.zip"),
+    ).toBe("https://acme.github.io/other/a.zip");
+    expect(
+      resolveMarketplaceUrl(indexUrl, "https://evil.example/a.zip"),
+    ).toBeNull();
     expect(resolveMarketplaceUrl(indexUrl, "//evil.example/a.zip")).toBeNull();
   });
 });

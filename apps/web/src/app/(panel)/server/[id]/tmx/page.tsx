@@ -34,13 +34,6 @@ export default async function ServerTMXPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold">Search TrackmaniaExchange</h1>
-        <h4 className="text-muted-foreground">
-          Search for maps or mappacks from TrackmaniaExchange and add them to
-          your server.
-        </h4>
-      </div>
       <Tabs defaultValue="maps" className="w-full">
         <TabsList className="w-full">
           <TabsTrigger value="maps">Maps</TabsTrigger>

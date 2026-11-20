@@ -3,6 +3,7 @@
 import { reloadServerPlugins } from "@/actions/database/server-plugins";
 import {
   changeServerPluginVersion,
+  checkForPluginUpdates,
   installMarketplacePlugin,
   installUploadedPlugin,
   saveServerPluginConfig,
@@ -41,6 +42,7 @@ import {
   IconBuildingStore,
   IconDownload,
   IconHistory,
+  IconRefresh,
   IconReload,
   IconSettings,
   IconTrash,
@@ -212,7 +214,7 @@ function InstalledPluginCard({
   return (
     <Card className="flex flex-col gap-3 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-start gap-3">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
           <Checkbox
             className="mt-1"
             checked={plugin.enabled}
@@ -220,7 +222,7 @@ function InstalledPluginCard({
             onCheckedChange={(checked) => toggle(checked === true)}
             aria-label={`Turn ${plugin.name} on or off`}
           />
-          <div className="flex flex-col gap-1">
+          <div className="flex min-w-0 flex-col gap-1">
             <div className="flex flex-wrap items-center gap-2">
               {plugin.source === "marketplace" && !plugin.firstParty ? (
                 <Link
@@ -253,7 +255,7 @@ function InstalledPluginCard({
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2 sm:flex-nowrap sm:justify-end">
           {plugin.update && (
             <InstallDialog
               name={plugin.name}
@@ -412,6 +414,44 @@ function ReloadButton({ serverId }: { serverId: string }) {
   );
 }
 
+function CheckUpdatesButton({ serverId }: { serverId: string }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+
+  async function check() {
+    setBusy(true);
+    try {
+      const { data, error } = await checkForPluginUpdates(serverId);
+      if (error || !data) {
+        throw new ServerError(error ?? "No result", "CheckPluginUpdatesError");
+      }
+      if (data.updates > 0) {
+        toast.success(
+          data.updates === 1
+            ? "1 update available"
+            : `${data.updates} updates available`,
+        );
+      } else {
+        toast.success("All plugins are up to date");
+      }
+      router.refresh();
+    } catch (error) {
+      toast.error("Failed to check for updates", {
+        description: getErrorMessage(error),
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Button variant="outline" onClick={check} disabled={busy}>
+      <IconRefresh className={busy ? "animate-spin" : undefined} />
+      Check for updates
+    </Button>
+  );
+}
+
 function UpdateAllButton({
   serverId,
   count,
@@ -481,8 +521,8 @@ export default function InstalledPlugins({
       aria-labelledby="installed-plugins-title"
       className="flex flex-col gap-4"
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+        <div className="flex min-w-0 flex-col gap-1">
           <h2 id="installed-plugins-title" className="text-lg font-semibold">
             Plugins
           </h2>
@@ -491,10 +531,11 @@ export default function InstalledPlugins({
             plugin that misbehaves is turned off and the admins are notified.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 xl:shrink-0 xl:justify-end">
           {updatable > 0 && (
             <UpdateAllButton serverId={serverId} count={updatable} />
           )}
+          {marketplaceEnabled && <CheckUpdatesButton serverId={serverId} />}
           <ReloadButton serverId={serverId} />
           {marketplaceEnabled && (
             <Link

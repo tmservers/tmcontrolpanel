@@ -32,8 +32,8 @@ export default function PanelCodriver() {
   }
 
   return (
-    <Tabs defaultValue="settings">
-      <TabsList>
+    <Tabs defaultValue="settings" className="w-full">
+      <TabsList className="w-full">
         <TabsTrigger value="settings">Settings</TabsTrigger>
         <TabsTrigger value="usage">Usage</TabsTrigger>
         <TabsTrigger value="history">History</TabsTrigger>

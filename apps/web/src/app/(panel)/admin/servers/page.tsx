@@ -22,16 +22,6 @@ export default async function AdminServersPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex gap-2 justify-between items-end">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold">Manage Servers</h1>
-          <h4 className="text-muted-foreground">
-            Here you can manage your servers, add new ones, and edit existing
-            server details.
-          </h4>
-        </div>
-      </div>
-
       {canViewClients ? (
         <Tabs defaultValue="servers" className="w-full">
           <TabsList className="w-full">

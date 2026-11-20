@@ -1,5 +1,6 @@
 import {
   MAX_CUSTOM_EVENT_BYTES,
+  resolvePreset,
   type CommandResult,
   type LiveSnapshot,
   type PluginCustomEvent,
@@ -21,7 +22,7 @@ import {
 import { AppError, errorMessage } from "../errors";
 import { TypedEventBus } from "../events";
 import { ActiveConnection } from "../gbx/active-connection";
-import { parseCallback } from "../gbx/callbacks";
+import { parseCallback, toGbxCallback } from "../gbx/callbacks";
 import type {
   GbxConnection,
   GbxSession,
@@ -37,19 +38,21 @@ import { createPluginContext } from "../plugins/plugin-context";
 import { PluginHost } from "../plugins/plugin-host";
 import type { PackageLoader } from "../plugins/sandbox/package-loader";
 import type { PluginDefinition } from "../plugins/sdk";
-import type {
-  Clock,
-  JukeboxStore,
-  MapMetadataProvider,
-  MapRepository,
-  MatchRepository,
-  NadeoRecordsProvider,
-  NotificationRepository,
-  PlayerRepository,
-  RecordRepository,
-  ServerRecord,
-  ServerRepository,
-  UserRepository,
+import {
+  noopErrorReporter,
+  type Clock,
+  type ErrorReporter,
+  type JukeboxStore,
+  type MapMetadataProvider,
+  type MapRepository,
+  type MatchRepository,
+  type NadeoRecordsProvider,
+  type NotificationRepository,
+  type PlayerRepository,
+  type RecordRepository,
+  type ServerRecord,
+  type ServerRepository,
+  type UserRepository,
 } from "../ports";
 import { ConnectionSupervisor } from "./connection-supervisor";
 import { GameEventHandler } from "./game-event-handler";
@@ -58,6 +61,7 @@ import { LiveSync } from "./live-sync";
 import { MapCatalog } from "./map-catalog";
 import { MapList } from "./map-list";
 import { MatchRecorder } from "./match-recorder";
+import { ServerAdmins } from "./server-admins";
 import { ServerCommands } from "./server-commands";
 import type { ServerEventMap } from "./server-events";
 
@@ -82,6 +86,8 @@ export interface RuntimeDependencies {
   jukebox: JukeboxStore;
   mapMetadata: MapMetadataProvider;
   nadeo: NadeoRecordsProvider;
+  // Where plugins' captureException goes; reports are dropped without it
+  errors?: ErrorReporter;
   connectTimeoutMs?: number;
   retryDelayMs?: number;
   maxRetries?: number;
@@ -108,7 +114,7 @@ function sameTarget(a: ConnectionTarget, b: ConnectionTarget): boolean {
   );
 }
 
-const NOTICE_PREFIX = "$<$0cfTMControlPanel$>: ";
+const NOTICE_PREFIX = "$<$0c6TMControlPanel$>: ";
 // A goodbye message must not hold up a handover
 const NOTICE_TIMEOUT_MS = 1000;
 
@@ -160,8 +166,18 @@ export class ServerRuntime {
       manialinks: this.manialinks,
       actions,
       theme: () => state.theme,
+      themeData: () => state.themeData,
     };
     const actionGroup = new ActionGroup(manialinkDeps);
+    const admins = new ServerAdmins(
+      serverId,
+      deps.systemCommands
+        ? (id, login) => deps.systemCommands!.isAdmin(id, login)
+        : null,
+      clock,
+      log,
+    );
+    admins.onChange((logins) => actionGroup.setAdmins(logins));
     const mapList = new MapList(gbx, log);
     const catalog = new MapCatalog(deps.maps, deps.mapMetadata, clock, log);
 
@@ -251,6 +267,7 @@ export class ServerRuntime {
             actions,
             manialinkDeps,
             actionGroup,
+            admins,
             mapList,
             catalog,
             records: deps.records,
@@ -259,6 +276,7 @@ export class ServerRuntime {
             nadeo: deps.nadeo,
             clock,
             manialinks: this.manialinks,
+            errors: deps.errors ?? noopErrorReporter,
             disablePlugin: (pluginId, name, reason) =>
               this.disablePlugin(pluginId, name, reason),
           },
@@ -285,9 +303,16 @@ export class ServerRuntime {
     });
 
     bus.on("playerConnect", (player) =>
-      this.manialinks.onPlayerConnect(player.login),
+      Promise.all([
+        this.manialinks.onPlayerConnect(player.login),
+        admins.playerConnected(player.login),
+      ]),
+    );
+    bus.on("playerList", (players) =>
+      admins.sync(players.map((player) => player.login)),
     );
     bus.on("playerDisconnect", (login) => {
+      admins.playerDisconnected(login);
       this.codriverWindows?.forget(login);
       this.manialinks.onPlayerDisconnect(login);
     });
@@ -469,7 +494,7 @@ export class ServerRuntime {
     this.name = record.name;
     this.state.enableHelpCommand = record.enableHelpCommand;
     await this.refreshChatConfig(record.chat);
-    await this.refreshTheme(record.theme);
+    await this.refreshTheme(record.theme, record.themeData);
 
     // No attempt yet: the one that is about to run reads this record anyway
     if (!this.attemptedTarget || sameTarget(this.attemptedTarget, record))
@@ -498,10 +523,19 @@ export class ServerRuntime {
     }
   }
 
-  // Plugins render their pages with the theme, so they reload to show the new one
-  private async refreshTheme(theme: ServerRecord["theme"]): Promise<void> {
-    if (JSON.stringify(theme) === JSON.stringify(this.state.theme)) return;
+  // Plugins reload to pick up the new theme; core pages are re-rendered in place
+  private async refreshTheme(
+    theme: ServerRecord["theme"],
+    themeData: ServerRecord["themeData"],
+  ): Promise<void> {
+    const data = themeData ?? resolvePreset("default");
+    if (
+      JSON.stringify([theme, data]) ===
+      JSON.stringify([this.state.theme, this.state.themeData])
+    )
+      return;
     this.state.theme = theme;
+    this.state.themeData = data;
     if (!this.connected) return;
     try {
       await this.plugins.reload(this.state.plugins, this.state.liveInfo.type);
@@ -511,6 +545,7 @@ export class ServerRuntime {
         "Failed to reload plugins for the new theme",
       );
     }
+    await this.manialinks.rerenderAll();
   }
 
   private async restart(): Promise<void> {
@@ -613,6 +648,7 @@ export class ServerRuntime {
     this.state.chat = server.chat;
     this.state.enableHelpCommand = server.enableHelpCommand;
     this.state.theme = server.theme;
+    this.state.themeData = server.themeData ?? resolvePreset("default");
     this.state.plugins = server.plugins;
 
     // Callbacks start before the sync below has loaded the map and players, so hold them
@@ -634,6 +670,10 @@ export class ServerRuntime {
   }
 
   private onCallback(method: string, data: unknown): void {
+    // Raw, for plugins that need a callback the runtime doesn't handle
+    if (this.events.listenerCount("gbxCallback") > 0) {
+      this.events.emit("gbxCallback", toGbxCallback(method, data));
+    }
     let event;
     try {
       event = parseCallback(method, data);

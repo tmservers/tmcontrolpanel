@@ -135,6 +135,79 @@ describe("nested registry config forms", () => {
       ).toBe(false);
     }
   });
+  it("validates Trackmania Events import paths and SDK requirements", () => {
+    const eventSchema = {
+      type: "object",
+      properties: {
+        maps: { type: "array", items: { type: "string" } },
+        pickAndBan: {
+          type: "object",
+          properties: {
+            teams: { type: "array", items: { type: "object", properties: {} } },
+            players: {
+              type: "array",
+              items: { type: "object", properties: {} },
+            },
+            type: { type: "string" },
+            order: { type: "string" },
+          },
+        },
+        wrongMaps: { type: "string" },
+        wrongTeams: { type: "array", items: { type: "string" } },
+      },
+      tmevents: {
+        maps: "maps",
+        teams: "pickAndBan.teams",
+        players: "pickAndBan.players",
+        type: "pickAndBan.type",
+        order: "pickAndBan.order",
+      },
+    };
+    expect(pluginConfigSchemaSchema.safeParse(eventSchema).success).toBe(true);
+    expect(
+      pluginConfigSchemaSchema.safeParse({
+        ...eventSchema,
+        tmevents: { maps: "missing" },
+      }).success,
+    ).toBe(false);
+    expect(
+      pluginConfigSchemaSchema.safeParse({
+        ...eventSchema,
+        tmevents: { maps: "wrongMaps" },
+      }).success,
+    ).toBe(false);
+    expect(
+      pluginConfigSchemaSchema.safeParse({
+        ...eventSchema,
+        tmevents: { teams: "wrongTeams" },
+      }).success,
+    ).toBe(false);
+    expect(
+      pluginConfigSchemaSchema.safeParse({ ...eventSchema, tmevents: {} })
+        .success,
+    ).toBe(false);
+
+    const base = {
+      slug: "example",
+      name: "Example",
+      version: "1.0.0",
+      author: "Author",
+      description: "Example plugin",
+    };
+    const sdkFour = parseManifest({
+      ...base,
+      sdk: 4,
+      configSchema: eventSchema,
+    });
+    expect(sdkFour.success).toBe(false);
+    if (!sdkFour.success)
+      expect(sdkFour.issues.join(" ")).toContain(
+        "Trackmania Events imports require SDK 5",
+      );
+    expect(
+      parseManifest({ ...base, sdk: 5, configSchema: eventSchema }).success,
+    ).toBe(true);
+  });
   it("requires SDK 2 for rich forms while retaining SDK 1 scalar forms", () => {
     const base = {
       slug: "example",

@@ -27,6 +27,12 @@ const config: Config = {
     SERVER_PASSWORD: process.env.NADEO_SERVER_PASSWORD || "",
     CONTACT: process.env.NADEO_CONTACT || "",
   },
+  // Optional Trackmania Events OAuth app, for importing events into plugin settings
+  TMEVENTS: {
+    CLIENT_ID: process.env.TMEVENTS_CLIENT_ID || "",
+    CLIENT_SECRET: process.env.TMEVENTS_CLIENT_SECRET || "",
+    REDIRECT_URI: process.env.TMEVENTS_REDIRECT_URI || "",
+  },
   REDISURI: process.env.REDIS_URI || "",
   GBX_SERVICE: {
     // Reached by the web server only

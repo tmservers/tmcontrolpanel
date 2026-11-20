@@ -1,4 +1,10 @@
-import type { GameModeType, ManialinkTheme, NotificationDto, PlayerInfo } from "@tmcontrolpanel/shared";
+import type {
+  GameModeType,
+  ManialinkTheme,
+  NotificationDto,
+  PlayerInfo,
+  ThemeData,
+} from "@tmcontrolpanel/shared";
 import type { z } from "zod";
 import type { ChatService } from "../chat/chat-service";
 import type { CommandHandler } from "../chat/command-router";
@@ -7,13 +13,12 @@ import type { LiveState } from "../live/live-state";
 import type { Logger } from "../logger";
 import type { ActionHandler } from "../manialink/action-router";
 import type { ActionButton } from "../manialink/components/action-group";
-import type { Manialink, ManialinkOptions } from "../manialink/components/manialink";
-import type { Window, WindowOptions } from "../manialink/components/window";
 import type {
-  LocalRecord,
-  MapRecord,
-  NadeoRecordsProvider,
-} from "../ports";
+  Manialink,
+  ManialinkOptions,
+} from "../manialink/components/manialink";
+import type { Window, WindowOptions } from "../manialink/components/window";
+import type { LocalRecord, MapRecord, NadeoRecordsProvider } from "../ports";
 import type { MapList } from "../server/map-list";
 import type { ServerEventMap } from "../server/server-events";
 
@@ -60,6 +65,7 @@ export interface PluginContext<Config = unknown> {
   serverName(): string | null;
   // Colors templates get as @theme
   theme(): ManialinkTheme;
+  themeData(): ThemeData;
   // Persists a new config for this plugin and notifies the instance
   saveConfig(config: Config): Promise<void>;
 
@@ -78,6 +84,8 @@ export interface PluginContext<Config = unknown> {
   players: {
     // Active player if known, otherwise fetched from the server
     get(login: string): Promise<PlayerInfo>;
+    // Whether the login holds a panel admin role on this server
+    isAdmin(login: string): Promise<boolean>;
   };
   maps: {
     findByUid(uid: string): Promise<MapRecord | null>;
@@ -87,7 +95,16 @@ export interface PluginContext<Config = unknown> {
     local(mapUid: string): Promise<LocalRecord | null>;
     forPlayers(mapUid: string, logins: string[]): Promise<LocalRecord[]>;
   };
-  notifyAdmins(message: string, description?: string): Promise<NotificationDto[]>;
+  // Reports to the operator's Sentry, tagged with the plugin and server
+  captureException(
+    error: unknown,
+    extra?: Record<string, unknown>,
+    tags?: Record<string, string>,
+  ): void;
+  notifyAdmins(
+    message: string,
+    description?: string,
+  ): Promise<NotificationDto[]>;
   // Turns the plugin off for this server and tells its admins why
   disable(reason: string): Promise<void>;
   server: {

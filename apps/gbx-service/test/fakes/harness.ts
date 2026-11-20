@@ -12,7 +12,11 @@ import type { SandboxLimits } from "../../src/core/plugins/sandbox/limits";
 import { PackageLoader } from "../../src/core/plugins/sandbox/package-loader";
 import type { SandboxAssets } from "../../src/core/plugins/sandbox/sandboxed-plugin";
 import type { PluginDefinition } from "../../src/core/plugins/sdk";
-import type { ServerPluginRecord, ServerRecord } from "../../src/core/ports";
+import type {
+  ErrorReporter,
+  ServerPluginRecord,
+  ServerRecord,
+} from "../../src/core/ports";
 import { ServerRuntime } from "../../src/core/server/server-runtime";
 import { loadSandboxAssets } from "../../src/infra/sandbox-assets";
 import { loadTemplateSources } from "../../src/infra/templates";
@@ -175,6 +179,7 @@ export interface HarnessOptions {
   templates?: Record<string, string>;
   systemCommands?: SystemCommandServices;
   codriver?: CodriverClient;
+  errors?: ErrorReporter;
   controller?: string;
 }
 
@@ -273,6 +278,7 @@ export async function createHarness(options: HarnessOptions = {}) {
     jukebox,
     mapMetadata: nadeo,
     nadeo,
+    errors: options.errors,
     systemCommands: options.systemCommands,
     controller: options.controller,
     codriver: options.codriver,

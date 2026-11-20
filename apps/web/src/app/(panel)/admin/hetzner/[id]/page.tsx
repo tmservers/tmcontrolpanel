@@ -1,13 +1,13 @@
-import { getHetznerLocations } from "@/services/hetzner/locations";
-import { getHetznerPricing } from "@/services/hetzner/pricing";
-import { getServerTypes } from "@/services/hetzner/server-types";
-import { getRateLimit } from "@/services/hetzner/servers";
 import ServerTypesPricing from "@/components/hetzner/pricing/server-types";
 import { PaginationTable } from "@/components/table/pagination-table";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { hasPermission } from "@/lib/auth";
 import { routePermissions, routes } from "@/routes";
+import { getHetznerLocations } from "@/services/hetzner/locations";
+import { getHetznerPricing } from "@/services/hetzner/pricing";
+import { getServerTypes } from "@/services/hetzner/server-types";
+import { getRateLimit } from "@/services/hetzner/servers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createNetworkActions } from "./networks-actions";
@@ -44,32 +44,23 @@ export default async function ProjectPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex gap-2 justify-between sm:items-end">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold">Hetzner Project</h1>
-          <h4 className="text-muted-foreground">
-            Manage your Hetzner servers, networks and volumes for this project.
-          </h4>
+      {rateLimit && (
+        <div className="flex justify-end">
+          <div className="flex flex-col gap-1">
+            <h4 className="text-sm text-muted-foreground">
+              Rate Limit: {rateLimit.limit - rateLimit.remaining} /{" "}
+              {rateLimit.limit}
+            </h4>
+            <Progress
+              value={
+                ((rateLimit.limit - rateLimit.remaining) / rateLimit.limit) *
+                100
+              }
+              className="w-32"
+            />
+          </div>
         </div>
-
-        <div className="flex flex-col gap-1">
-          {rateLimit && (
-            <>
-              <h4 className="text-sm text-muted-foreground">
-                Rate Limit: {rateLimit.limit - rateLimit.remaining} /{" "}
-                {rateLimit.limit}
-              </h4>
-              <Progress
-                value={
-                  ((rateLimit.limit - rateLimit.remaining) / rateLimit.limit) *
-                  100
-                }
-                className="w-32"
-              />
-            </>
-          )}
-        </div>
-      </div>
+      )}
 
       <Tabs defaultValue="servers" className="w-full">
         <TabsList className="w-full">

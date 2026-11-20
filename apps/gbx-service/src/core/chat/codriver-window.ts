@@ -3,6 +3,10 @@ import type { Logger } from "../logger";
 import type { ActionGroup } from "../manialink/components/action-group";
 import type { ManialinkDeps } from "../manialink/components/manialink";
 import { Window } from "../manialink/components/window";
+import {
+  CodriverWindowPage,
+  CodriverWindowUpdatePage,
+} from "../manialink/tsx/codriver-window";
 import type { CodriverClient } from "./codriver-command";
 import { type CodriverDrafts, MAX_DRAFT_LENGTH } from "./codriver-drafts";
 
@@ -305,7 +309,8 @@ export class CodriverWindows {
     if (chat.window) return;
     chat.window = new Window(this.options.deps, {
       id: CODRIVER_WINDOW_ID,
-      template: "codriver-window",
+      component: CodriverWindowPage,
+      updateComponent: CodriverWindowUpdatePage,
       login,
       title: "Codriver (experimental)",
       size: SIZE,

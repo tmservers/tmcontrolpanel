@@ -181,3 +181,104 @@ export function throttle(ctx: PluginContext<any>, fn: () => void, ms: number): (
     else run();
   };
 }
+
+
+export interface TableColumn<Row> {
+  title: string;
+  width: number;
+  align?: "left" | "center" | "right";
+  // Cell text; defaults to row[key]
+  key?: keyof Row & string;
+  text?: (row: Row) => unknown;
+  // Text color override (3-digit hex), e.g. to flag a status
+  color?: (row: Row) => string | null | undefined;
+}
+
+export interface TableOptions<Row> {
+  columns: TableColumn<Row>[];
+  rows: readonly Row[];
+  // 1-based; clamped to the available pages
+  page?: number;
+  pageSize?: number;
+  rowHeight?: number;
+  empty?: string;
+}
+
+export interface TableCell {
+  text: string;
+  color: string | null;
+  x: number;
+  width: number;
+  halign: "left" | "center" | "right";
+}
+
+// Data for the components/table base template: {{> components/table table=data.table prev=... next=...}}
+export function buildTable<Row>(options: TableOptions<Row>) {
+  const rowHeight = options.rowHeight ?? 4;
+  const pageSize = Math.max(1, Math.floor(options.pageSize ?? 10));
+  const total = options.rows.length;
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const page = Math.min(Math.max(1, Math.floor(options.page ?? 1)), pages);
+  const start = (page - 1) * pageSize;
+
+  let offset = 0;
+  const layout = options.columns.map((column) => {
+    const x = offset;
+    offset += column.width;
+    const halign = column.align ?? "left";
+    // Labels anchor on their alignment edge, with a small inset
+    const labelX =
+      halign === "left"
+        ? x + 1
+        : halign === "right"
+          ? x + column.width - 1
+          : x + column.width / 2;
+    return { column, x: labelX, width: Math.max(1, column.width - 2), halign };
+  });
+
+  const rows = options.rows
+    .slice(start, start + pageSize)
+    .map((row, index) => ({
+      y: -(rowHeight + index * rowHeight),
+      odd: index % 2 === 1,
+      cells: layout.map(({ column, x, width, halign }): TableCell => {
+        const value = column.text
+          ? column.text(row)
+          : column.key
+            ? row[column.key]
+            : "";
+        return {
+          text: value === null || value === undefined ? "" : String(value),
+          color: column.color?.(row) ?? null,
+          x,
+          width,
+          halign,
+        };
+      }),
+    }));
+
+  return {
+    width: offset,
+    rowHeight,
+    textY: -rowHeight / 2,
+    // The pager stays put on short pages, below a full page of rows
+    pagerY: -(rowHeight * (pageSize + 1) + 1),
+    columns: layout.map(({ column, x, width, halign }) => ({
+      title: column.title,
+      x,
+      width,
+      halign,
+    })),
+    rows,
+    page,
+    pages,
+    total,
+    from: total === 0 ? 0 : start + 1,
+    to: start + rows.length,
+    hasPrev: page > 1,
+    hasNext: page < pages,
+    empty: options.empty ?? "Nothing to show",
+  };
+}
+
+export type Table = ReturnType<typeof buildTable>;

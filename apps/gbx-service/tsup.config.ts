@@ -26,7 +26,12 @@ export default defineConfig({
   clean: true,
   sourcemap: true,
   // Workspace packages ship TypeScript source, so they are bundled in
-  noExternal: [/^@tmcontrolpanel\/(?!plugin-sdk)/],
+  noExternal: [/^@tmcontrolpanel\/(?!plugin-sdk)/, /^maniatsx(\/|$)/],
+  // TSX renders with maniatsx
+  esbuildOptions(options) {
+    options.jsx = "automatic";
+    options.jsxImportSource = "maniatsx";
+  },
   // Prisma loads its engine relative to its own package
   external: ["@prisma/client", ".prisma/client"],
   define: {

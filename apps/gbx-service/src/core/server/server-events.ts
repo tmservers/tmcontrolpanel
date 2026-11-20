@@ -1,6 +1,7 @@
 import type {
   ActiveRound,
   DetailedPlayerChat,
+  GbxCallback,
   LiveInfo,
   NotificationDto,
   PlayerInfo,
@@ -61,6 +62,8 @@ export type ServerEventMap = {
   adminCommand: [notifications: NotificationDto[]];
   // Emitted by a plugin with ctx.emit(); delivered after the emitting call returns
   pluginEvent: [event: PluginCustomEvent];
+  // Every dedicated server callback, before the runtime handles it
+  gbxCallback: [callback: GbxCallback];
 };
 
 export type ServerEventName = keyof ServerEventMap;

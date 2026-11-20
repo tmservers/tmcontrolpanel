@@ -1,7 +1,7 @@
 "use client";
 
-import { exportRecords } from "@/lib/api-client/database";
 import { Button } from "@/components/ui/button";
+import { exportRecords } from "@/lib/api-client/database";
 import { getErrorMessage } from "@/lib/utils";
 import { ServerError } from "@/types/responses";
 import { IconDownload } from "@tabler/icons-react";
@@ -41,4 +41,9 @@ export default function ServerRecordsActions({
       <IconDownload />
     </Button>
   );
+}
+
+// Renders the export button in a records table's search row
+export function createRecordsActions(_refetch: () => void, serverId?: string) {
+  return serverId ? <ServerRecordsActions serverId={serverId} /> : null;
 }

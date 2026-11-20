@@ -42,7 +42,24 @@ describe("ActionRouter", () => {
     expect(exact).toHaveBeenCalledTimes(1);
     expect(pattern).toHaveBeenCalledWith(answer("match-pickban-action-xyz"), {
       uid: "xyz",
+      args: [],
     });
+  });
+
+  it("dispatches exact and pattern actions with pipe-delimited args", async () => {
+    const router = new ActionRouter(silentLogger);
+    const exact = vi.fn();
+    const pattern = vi.fn();
+    router.register("exact", exact);
+    router.register("item-{id}", pattern);
+
+    await router.dispatch(answer("exact|one|two"));
+    await router.dispatch(answer("exact"));
+    await router.dispatch(answer("item-42|value|"));
+
+    expect(exact.mock.calls[0][1]).toEqual({ args: ["one", "two"] });
+    expect(exact.mock.calls[1][1]).toEqual({ args: [] });
+    expect(pattern.mock.calls[0][1]).toEqual({ id: "42", args: ["value", ""] });
   });
 
   it("stops calling a handler after unregistering", async () => {

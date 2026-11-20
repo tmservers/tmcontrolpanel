@@ -18,6 +18,11 @@ export interface Config {
     SERVER_PASSWORD: string;
     CONTACT: string;
   };
+  TMEVENTS: {
+    CLIENT_ID: string;
+    CLIENT_SECRET: string;
+    REDIRECT_URI: string;
+  };
   REDISURI: string;
   GBX_SERVICE: {
     URL: string;

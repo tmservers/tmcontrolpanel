@@ -1,10 +1,10 @@
-import { getJoinLink } from "@/services/gbx/advanced";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AdvancedActionsForm from "@/forms/server/advanced/advanced-actions-form";
 import ScriptGeneratorForm from "@/forms/server/advanced/script-generator-form";
 import { hasPermission } from "@/lib/auth";
 import { routePermissions, routes } from "@/routes";
+import { getJoinLink } from "@/services/gbx/advanced";
 import { redirect } from "next/navigation";
 
 export default async function ServerAdvancedPage({
@@ -24,14 +24,6 @@ export default async function ServerAdvancedPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold">Advanced Actions</h1>
-        <h4 className="text-muted-foreground">
-          Perform advanced actions, such as managing fake players, and
-          retrieving the server&apos;s join link.
-        </h4>
-      </div>
-
       <Tabs defaultValue="advanced-actions" className="w-full">
         <TabsList className="w-full">
           <TabsTrigger value="advanced-actions">Advanced Actions</TabsTrigger>

@@ -39,6 +39,7 @@ import { RedisJukeboxStore } from "./infra/redis/jukebox-store";
 import { RedisRateLimiter } from "./infra/redis/rate-limiter";
 import { createRedis } from "./infra/redis/redis";
 import { loadSandboxAssets } from "./infra/sandbox-assets";
+import { sentryErrorReporter } from "./infra/sentry-reporter";
 import { loadTemplateSources } from "./infra/templates";
 
 // Connections every process needs: the front, each worker and the single-process mode
@@ -144,6 +145,7 @@ export async function createContainer(
     jukebox: new RedisJukeboxStore(redis),
     mapMetadata: nadeo,
     nadeo,
+    errors: sentryErrorReporter,
     systemCommands: new PrismaSystemCommandServices(db, redis),
     codriver: config.PANEL_INTERNAL_URL
       ? new HttpCodriverClient(

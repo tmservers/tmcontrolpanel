@@ -1,6 +1,3 @@
-import { getMapList } from "@/services/database/maps";
-import { getJukebox } from "@/services/gbx/map";
-import { getLocalMaps } from "@/services/gbx/server";
 import Jukebox from "@/components/maps/jukebox";
 import ServerMaps from "@/components/maps/server-maps";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,6 +5,9 @@ import { hasPermission } from "@/lib/auth";
 import { getLogger } from "@/lib/logger";
 import { getFileManagerHealth } from "@/lib/managers/file-manager";
 import { routePermissions, routes } from "@/routes";
+import { getMapList } from "@/services/database/maps";
+import { getJukebox } from "@/services/gbx/map";
+import { getLocalMaps } from "@/services/gbx/server";
 import { LocalMapInfo } from "@/types/map";
 import { redirect } from "next/navigation";
 
@@ -51,12 +51,6 @@ export default async function ServerMapsPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold">Manage Server Maps</h1>
-        <h4 className="text-muted-foreground">
-          Manage the maps of the server and their order.
-        </h4>
-      </div>
       <Tabs defaultValue="maps" className="w-full">
         <TabsList className="w-full">
           <TabsTrigger value="maps">Server Maps</TabsTrigger>

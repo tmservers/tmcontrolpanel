@@ -108,6 +108,12 @@ describe("marketplace", () => {
     expect(requests).toEqual(["/plugins/index.json"]);
   });
 
+  it("skips the cache when forced, for checking updates right away", async () => {
+    await getMarketplaceIndex();
+    await getMarketplaceIndex(true);
+    expect(requests).toEqual(["/plugins/index.json", "/plugins/index.json"]);
+  });
+
   it("keeps the last index when GitHub is down", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     await getMarketplaceIndex();

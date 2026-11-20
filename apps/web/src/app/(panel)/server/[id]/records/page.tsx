@@ -1,6 +1,6 @@
 import { PaginationTable } from "@/components/table/pagination-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ServerRecordsActions from "./actions";
+import { createRecordsActions } from "./actions";
 import { createMapsColumns } from "./maps-columns";
 import { createMatchesColumns } from "./matches-columns";
 
@@ -13,16 +13,6 @@ export default async function ServerRecordsPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-end justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold">Records</h1>
-          <h4 className="text-muted-foreground">
-            View and manage server records.
-          </h4>
-        </div>
-        <ServerRecordsActions serverId={id} />
-      </div>
-
       <Tabs defaultValue="matches" className="w-full">
         <TabsList className="w-full">
           <TabsTrigger value="matches">Matches</TabsTrigger>
@@ -35,6 +25,8 @@ export default async function ServerRecordsPage({
             args={id}
             endpoint={`/api/servers/${id}/matches`}
             filter
+            actions={createRecordsActions}
+            actionsArgs={id}
           />
         </TabsContent>
 
@@ -43,6 +35,8 @@ export default async function ServerRecordsPage({
             createColumns={createMapsColumns}
             endpoint={`/api/servers/${id}/records/maps`}
             filter
+            actions={createRecordsActions}
+            actionsArgs={id}
           />
         </TabsContent>
       </Tabs>

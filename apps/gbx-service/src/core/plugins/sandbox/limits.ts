@@ -58,6 +58,8 @@ export const RATE_LIMITS = {
   nadeo: { burst: 10, perSecond: 1 },
   notify: { burst: 3, perSecond: 1 / 60 },
   events: { burst: 50, perSecond: 20 },
+  // Over this captureException drops reports instead of failing the plugin
+  errorReports: { burst: 10, perSecond: 1 / 6 },
 } satisfies Record<string, RateLimit>;
 
 export type RateLimitName = keyof typeof RATE_LIMITS;

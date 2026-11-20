@@ -2,17 +2,66 @@
 
 Release notes of TMControlPanel, newest first. The entries are the descriptions of the [GitHub releases](https://github.com/tmservers/tmcontrolpanel/releases).
 
+## [1.1.0] - 2026-11-20
+
+### Breaking changes
+
+- Manialink color themes are replaced by **theme presets**. Servers and groups now pick a preset (Default or Broadcast) or inherit one. Custom color themes saved before this release are ignored and fall back to Default, so pick a preset again on the server or group theme page.
+- The plugin API is now **SDK 5**. Plugins built for SDK 4 and older keep working, but the first-party plugin updates listed below need SDK 5 and are only offered to panels on this release.
+
+### New Features
+
+- **Theme presets** for in-game Manialinks, with a preview in the panel. The new **Broadcast** preset gives every core page and first-party widget a broadcast-style layout. Changing a server's preset re-renders open pages in game without a reconnect.
+- **Trackmania Events import** in plugin settings. Connect your Trackmania Events account under Settings, Connected apps, then import an event's teams, seeding, maps and pick and ban into a plugin (Match plugin). Every step can be edited before it is applied, and tracks missing from the server are downloaded during the import. Configure with `TMEVENTS_CLIENT_ID`, `TMEVENTS_CLIENT_SECRET` and `TMEVENTS_REDIRECT_URI`.
+- **Plugin SDK 5.**
+  - Write widgets and windows as TSX components (maniatsx) instead of Handlebars templates, with a shared UI kit (`@tmcontrolpanel/plugin-sdk/ui`: `Page`, `WindowFrame`, `WidgetFrame`, `Panel`, `UiTable`, `Label` and `HideWhileDriving`), typed actions and access to the server's theme preset with `ctx.ui.themeData()`. Handlebars templates still work.
+  - Check whether a player is a panel admin of the server with `ctx.players.isAdmin`, and show action buttons only to admins with `adminOnly`.
+  - Build paginated tables with the shared `components/table` partial.
+  - Subscribe to any dedicated server callback with `gbx:` events (`gbx:*` for all). Manialink answers and tunnel data are never delivered.
+  - Report exceptions to the operator's Sentry with `ctx.captureException`, tagged with the plugin and server.
+  - Config schemas can declare where a Trackmania Events import writes (`tmevents`).
+- "Check for updates" button on the server plugins page, so a newly published plugin version shows up without waiting for the marketplace cache.
+- Plugin settings forms show Nadeo display names next to player logins.
+- The action group and Codriver window in game are rendered from TSX and follow the server's theme preset.
+
+### Changes
+
+- Page headings moved into the shared panel layout.
+- TMControlPanel chat notices use the panel's primary green.
+- The Codriver confirmation hint in game is on its own line.
+- Published the privacy notice with contact details.
+
+### Bug Fixes
+
+- Plugin list buttons are aligned.
+- The Trackmania Events credentials are passed to the web container in the compose files.
+
+### Plugins
+
+The first-party plugins in the marketplace are rewritten as TSX components on SDK 5 and have Broadcast theme layouts. Versions below are the latest published ones.
+
+- **New: Openplanet Control** (`openplanet` 2.1.2). Detects Openplanet and its signature mode, enforces whether it is allowed, which signature modes are accepted and a minimum version (warn, force to spectator or delayed kick), and gives admins a window with every player's signature. Flagged players get a help window that explains how to fix it.
+- **New: Team Score** (`team-score` 2.1.1). Head-to-head scoreboard for teams mode with custom team names, colors and logos, a marker for the team leading the round, an orange status strip during warm-up, and automatic team placement for configured players.
+- **Match** 1.4.1 → 2.1.6. Imports teams, seeding, maps and pick and ban from Trackmania Events, replacing the CSV team import. Pick and ban rows start below the header, and player name styling no longer leaks into chat messages.
+- **eCircuitMania** 1.2.1 → 2.1.1. Failed eCircuitMania requests are reported to Sentry.
+- **Map Info** 1.1.1 → 2.1.9. White map names now end in the widget's text color.
+- **Live Round** 1.2.1 → 2.1.8 and **Live Ranking** 1.1.1 → 2.1.1. The rank quad is only colored in teams mode.
+- **Time Attack Leaderboard** 1.1.1 → 2.1.3. The personal best box is drawn above its row.
+- **Admin Help** 1.2.1 → 2.1.1, **Player Info** 1.2.1 → 2.1.1, **Records Info** 1.3.1 → 2.1.7 and **Time Attack Active Runs** 1.1.1 → 2.1.4. Ported to TSX with Broadcast layouts.
+
 ## [1.0.0] - 2026-11-06
 
 ### TMControlPanel Release
 
 ### Breaking changes
+
 - GoControlPanel is now **TMControlPanel**. New name, branding and identifiers.
 - The panel is split into two containers: the web panel and a new **GBX service** that holds the dedicated server connections, live updates, match recording and plugins. You now run both images (`tmcontrolpanel` + `tmcontrolpanel-gbx-service`, with `-postgres` variants).
 - Server credentials are now stored encrypted.
 - Upgrading from the beta is a side-by-side migration. Follow `docs/migrating-beta-to-release.md` before pulling `:latest`.
 
 ### New Features
+
 - **Plugin marketplace**: install third-party plugins that run in a sandbox. The built-in plugins are now first-party marketplace packages.
   - Plugin settings use config schemas and tabbed forms.
   - Plugins can send events to other plugins.
@@ -30,6 +79,7 @@ Release notes of TMControlPanel, newest first. The entries are the descriptions 
 - New landing page.
 
 ### Security
+
 - Admin actions are authorized on the server side for every linked resource, and match deletion and exports are scoped to their server.
 - Audit log access limited to targets you administer. Secrets stay out of audit entries and the browser.
 - Map downloads restricted to public hosts.
@@ -39,6 +89,7 @@ Release notes of TMControlPanel, newest first. The entries are the descriptions 
 - Runtime dependencies with published advisories upgraded.
 
 ### Bug Fixes
+
 - Panel shows a notice instead of crashing when a server is unreachable.
 - Servers that have never connected keep retrying instead of giving up.
 - Fixed lost records and errors when players connect.

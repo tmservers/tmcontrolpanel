@@ -47,6 +47,9 @@ services:
       NADEO_CLIENT_ID: 
       NADEO_CLIENT_SECRET: 
       NADEO_REDIRECT_URI: http://localhost:3000/api/auth/callback/nadeo
+      TMEVENTS_CLIENT_ID:
+      TMEVENTS_CLIENT_SECRET:
+      TMEVENTS_REDIRECT_URI: http://localhost:3000/api/auth/callback/tmevents
       NADEO_SERVER_LOGIN: 
       NADEO_SERVER_PASSWORD: 
       NADEO_CONTACT: TMControlPanel / <your contact info>

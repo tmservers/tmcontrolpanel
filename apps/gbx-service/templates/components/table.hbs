@@ -1,0 +1,28 @@
+{{!-- Shared table (SDK 5). Data from buildTable(); prev/next are page actions, pos is optional --}}
+<frame pos="{{ default pos "0 0" }}" size="{{ table.width }} {{ subtract 0 (add table.pagerY -6) }}">
+  <quad pos="0 0" size="{{ table.width }} {{ table.rowHeight }}" bgcolor="{{ @theme.quad.background }}" />
+  {{#each table.columns}}
+  <label pos="{{ x }} {{ ../table.textY }}" size="{{ width }} {{ ../table.rowHeight }}" text="{{ title }}" halign="{{ halign }}" valign="center2" textsize="0.9" textfont="GameFontSemiBold" textcolor="{{ @theme.label.foreground }}" />
+  {{/each}}
+
+  {{#each table.rows}}
+  <frame pos="0 {{ y }}" size="{{ ../table.width }} {{ ../table.rowHeight }}">
+    {{#if odd}}<quad pos="0 0" size="{{ ../table.width }} {{ ../table.rowHeight }}" bgcolor="{{ @theme.quad.foregroundMuted }}" opacity="0.6" />{{/if}}
+    {{#each cells}}
+    <label pos="{{ x }} {{ ../../table.textY }}" size="{{ width }} {{ ../../table.rowHeight }}" text="{{ text }}" halign="{{ halign }}" valign="center2" textsize="0.9" textfont="GameFontRegular" textcolor="{{#if color}}{{ color }}{{else}}{{ @theme.label.background }}{{/if}}" />
+    {{/each}}
+  </frame>
+  {{else}}
+  <label pos="{{ divide table.width 2 }} {{ subtract 0 (multiply table.rowHeight 2) }}" size="{{ table.width }} {{ table.rowHeight }}" text="{{ table.empty }}" halign="center" valign="center2" textsize="1" textfont="GameFontRegular" textcolor="{{ @theme.label.background }}" opacity="0.6" />
+  {{/each}}
+
+  {{#if (eq table.pages 1)}}{{else}}
+  <frame pos="0 {{ table.pagerY }}" size="{{ table.width }} 5">
+    <quad pos="0 0" size="{{ table.width }} 0.25" bgcolor="{{ @theme.quad.background }}" opacity="0.4" />
+    <label pos="1 -3" size="{{ subtract table.width 30 }} 4" text="{{ table.from }}-{{ table.to }} of {{ table.total }}" valign="center2" textsize="0.9" textfont="GameFontRegular" textcolor="{{ @theme.label.background }}" opacity="0.7" />
+    <label pos="{{ subtract table.width 22 }} -3" size="10 4" text=" Prev" halign="center" valign="center2" textsize="0.9" textfont="GameFontSemiBold" textcolor="{{ @theme.label.background }}" {{#if table.hasPrev}}action="{{ prev }}" focusareacolor1="{{ @theme.label.foregroundMuted }}" focusareacolor2="{{ @theme.label.foreground }}"{{else}}opacity="0.3"{{/if}} />
+    <label pos="{{ subtract table.width 14 }} -3" size="6 4" text="{{ table.page }}/{{ table.pages }}" halign="center" valign="center2" textsize="0.9" textfont="GameFontRegular" textcolor="{{ @theme.label.background }}" />
+    <label pos="{{ subtract table.width 6 }} -3" size="10 4" text="Next " halign="center" valign="center2" textsize="0.9" textfont="GameFontSemiBold" textcolor="{{ @theme.label.background }}" {{#if table.hasNext}}action="{{ next }}" focusareacolor1="{{ @theme.label.foregroundMuted }}" focusareacolor2="{{ @theme.label.foreground }}"{{else}}opacity="0.3"{{/if}} />
+  </frame>
+  {{/if}}
+</frame>

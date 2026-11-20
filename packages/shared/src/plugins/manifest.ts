@@ -3,6 +3,7 @@ import { GAME_MODE_TYPES } from "../types/live";
 import { isCapability, isHttpCapability } from "./capabilities";
 import {
   configSchemaNeedsSdk2,
+  configSchemaNeedsSdk5,
   pluginConfigSchemaSchema,
 } from "./config-schema";
 import { isValidVersion } from "./version";
@@ -39,6 +40,8 @@ const RESERVED_SLUGS = new Set<string>([
   "server",
   // Codriver emits "codriver:*" events; a plugin with this slug could fake them
   "codriver",
+  // "gbx:*" subscribes to raw dedicated server callbacks
+  "gbx",
 ]);
 
 export const PLUGIN_SLUG = /^[a-z][a-z0-9-]{1,38}[a-z0-9]$/;
@@ -143,6 +146,17 @@ export const pluginManifestSchema = z
         code: z.ZodIssueCode.custom,
         path: ["sdk"],
         message: "Rich config forms require SDK 2",
+      });
+    }
+    if (
+      manifest.sdk < 5 &&
+      manifest.configSchema &&
+      configSchemaNeedsSdk5(manifest.configSchema)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["sdk"],
+        message: "Trackmania Events imports require SDK 5",
       });
     }
   });

@@ -15,6 +15,7 @@ export default function ServerThemeForm({
     <ThemeForm
       theme={overview.theme}
       inherited={overview.inherited}
+      allowInherit
       inheritedLabel={
         overview.inheritedFrom
           ? `the theme of ${overview.inheritedFrom}`

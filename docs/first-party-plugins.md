@@ -2,18 +2,18 @@
 
 The first-party plugins available to TMControlPanel are ordinary [plugin SDK](./plugin-sdk.md) packages. They run in the same sandbox as marketplace plugins, with only the capabilities they declare. This guide is for contributors who change them or add one.
 
-| Plugin | What it does | Capabilities |
-|---|---|---|
-| `admin` | `/admin` and a button that notify the server's admins | `ui`, `chat:send`, `notifications` |
-| `ecm` | Sends finishes and rounds to eCircuitMania | `ui`, `http:us-central1-fantasy-trackmania.cloudfunctions.net` |
-| `live-ranking` | Points standings in rounds, cup and teams | `ui` |
-| `live-round` | Live timings of the current round | `ui`, `records:read`, `nadeo:read` |
-| `map-info` | Name and author of the current map | `ui`, `maps:read` |
-| `match` | Pick and ban, match start and stop, pause, lobby | `ui`, `chat:send`, `maps:read`, `maps:write`, `nadeo:read`, `mode:control` |
-| `player-info` | Records, personal bests and setups of the players | `ui`, `records:read`, `nadeo:read` |
-| `records-info` | World record and local record of the map | `ui`, `records:read`, `nadeo:read` |
-| `ta-active-runs` | Players still driving in time attack | `ui` |
-| `ta-leaderboard` | Time attack leaderboard | `ui` |
+| Plugin           | What it does                                          | Capabilities                                                               |
+| ---------------- | ----------------------------------------------------- | -------------------------------------------------------------------------- |
+| `admin`          | `/admin` and a button that notify the server's admins | `ui`, `chat:send`, `notifications`                                         |
+| `ecm`            | Sends finishes and rounds to eCircuitMania            | `ui`, `http:us-central1-fantasy-trackmania.cloudfunctions.net`             |
+| `live-ranking`   | Points standings in rounds, cup and teams             | `ui`                                                                       |
+| `live-round`     | Live timings of the current round                     | `ui`, `records:read`, `nadeo:read`                                         |
+| `map-info`       | Name and author of the current map                    | `ui`, `maps:read`                                                          |
+| `match`          | Pick and ban, match start and stop, pause, lobby      | `ui`, `chat:send`, `maps:read`, `maps:write`, `nadeo:read`, `mode:control` |
+| `player-info`    | Records, personal bests and setups of the players     | `ui`, `records:read`, `nadeo:read`                                         |
+| `records-info`   | World record and local record of the map              | `ui`, `records:read`, `nadeo:read`                                         |
+| `ta-active-runs` | Players still driving in time attack                  | `ui`                                                                       |
+| `ta-leaderboard` | Time attack leaderboard                               | `ui`                                                                       |
 
 ## Where they live
 
@@ -41,7 +41,9 @@ uploads and existing packages continue to work. `FIRST_PARTY_PLUGINS_DIR` is no 
 The configurable first-party plugins declare their settings forms in `configSchema`
 inside their registry-owned `tmcp-plugin.json`. The installed version's manifest
 controls labels, defaults, validation, nested player/team lists, user and map/script
-selectors, conditional fields, CSV import mappings, and pick-and-ban steps. The panel
+selectors, conditional fields, CSV import mappings, and pick-and-ban steps. Match plugin
+version 1.5.0 and later imports teams, seeding, maps, and pick and ban from Trackmania
+Events, replacing its CSV team import. The panel
 keeps one generic form renderer; it has no per-plugin forms or modal lookup table.
 JSON import/export uses the stored configuration format. API keys marked `secret`
 are masked in the panel and omitted from exports. ECM version `1.1.1` makes its

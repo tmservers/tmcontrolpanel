@@ -25,17 +25,12 @@ export default async function ServerCodriverPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="flex items-center gap-2 text-2xl font-bold">
-          Codriver <Badge variant="outline">Experimental</Badge>
-        </h1>
-        <h4 className="text-muted-foreground">
-          Ask Codriver here or use /co and /ai in game chat. Codriver is
-          experimental and can make mistakes.
-        </h4>
-      </div>
-      <Tabs defaultValue="chat">
-        <TabsList>
+      <p className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Badge variant="outline">Experimental</Badge>
+        Codriver can make mistakes.
+      </p>
+      <Tabs defaultValue="chat" className="w-full">
+        <TabsList className="w-full">
           <TabsTrigger value="chat" className="px-4">
             Chat
           </TabsTrigger>

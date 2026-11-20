@@ -49,13 +49,6 @@ export default async function ServerNadeoPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold">Nadeo</h1>
-        <h4 className="text-muted-foreground">
-          Search and download maps and campaigns from Nadeo servers.
-        </h4>
-      </div>
-
       <Tabs defaultValue="totd" className="w-full">
         <TabsList className="w-full">
           <TabsTrigger value="totd">Track of the Day</TabsTrigger>

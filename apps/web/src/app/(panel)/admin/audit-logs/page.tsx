@@ -12,15 +12,6 @@ export default async function AdminAuditLogsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex gap-2 justify-between items-end">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold">Audit Logs</h1>
-          <h4 className="text-muted-foreground">
-            Here you can view the audit logs of user actions within the application.
-          </h4>
-        </div>
-      </div>
-
       <PaginationTable
         createColumns={createColumns}
         endpoint="/api/audit-logs"

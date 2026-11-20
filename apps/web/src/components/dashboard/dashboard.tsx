@@ -52,15 +52,6 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col gap-6 p-4 lg:p-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold">
-          Welcome back, {session.user.displayName}
-        </h1>
-        <h4 className="text-muted-foreground">
-          Here&apos;s what is happening on your servers.
-        </h4>
-      </div>
-
       <div className="grid gap-4 grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="Servers online"

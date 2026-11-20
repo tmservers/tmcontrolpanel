@@ -7,6 +7,7 @@ import {
   describeCapability,
   isCapability,
   isHostAllowed,
+  isReservedSlug,
   maskSecrets,
   mergeSecrets,
   parseManifest,
@@ -123,6 +124,10 @@ describe("versions", () => {
 });
 
 describe("manifest", () => {
+  it("reserves the raw GBX event namespace", () => {
+    expect(isReservedSlug("gbx")).toBe(true);
+  });
+
   it("accepts a valid manifest and fills defaults", () => {
     const result = parseManifest(validManifest);
     expect(result.success).toBe(true);

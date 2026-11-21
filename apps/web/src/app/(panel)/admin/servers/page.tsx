@@ -48,6 +48,9 @@ export default async function AdminServersPage({
       hasPermission(routePermissions.admin.hetzner.create),
       hasPermission(routePermissions.admin.servers.clients.manage),
     ]);
+  const canDeploy =
+    (session?.user.projects.some((p) => p.role === "Admin") ?? false) ||
+    canCreateProject;
 
   const recentlyCreatedServers = canViewServers
     ? (await getRecentlyCreatedHetznerServers()).data
@@ -58,8 +61,13 @@ export default async function AdminServersPage({
       createColumns={createColumns}
       endpoint="/api/servers"
       actions={createActions}
-      actionsAllowed={canCreateServer}
-      actionsArgs={{ recentlyCreatedServers }}
+      actionsAllowed={canCreateServer || canDeploy}
+      actionsArgs={{
+        recentlyCreatedServers,
+        canCreateServer,
+        canDeploy,
+        canAddToken: canCreateProject,
+      }}
       filter
     />
   );

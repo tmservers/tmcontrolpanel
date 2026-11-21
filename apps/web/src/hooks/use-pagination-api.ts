@@ -22,6 +22,7 @@ export const usePaginationAPI = <TData>(
   },
   filter: string = "",
   queryFilters: Record<string, string> = {},
+  enabled = true,
 ): PaginationAPIHook<TData> => {
   const query = useQuery({
     queryKey: queryKeys.paginated(
@@ -46,6 +47,7 @@ export const usePaginationAPI = <TData>(
       ),
     // Keep showing the old page while the next one loads, instead of an empty table
     placeholderData: keepPreviousData,
+    enabled,
   });
 
   useEffect(() => {

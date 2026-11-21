@@ -15,7 +15,6 @@ import { useFormContext, UseFormReturn } from "react-hook-form";
 import { SimpleServerSetupSchemaType } from "./server-setup-schema";
 
 export default function ServerControllerForm({
-  form,
   onNext,
   onBack,
 }: {
@@ -25,6 +24,29 @@ export default function ServerControllerForm({
 }) {
   return (
     <form className="flex flex-col gap-4">
+      <ServerControllerFields />
+
+      <div className="flex gap-2 justify-between">
+        <Button className="flex-1 max-w-32" variant="outline" onClick={onBack}>
+          <IconArrowNarrowLeft />
+          Previous
+        </Button>
+        <Button className="flex-1 max-w-32" type="button" onClick={onNext}>
+          Next
+          <IconArrowNarrowRight />
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+// Controller picker and its settings; any form with a `serverController` field can use it
+export function ServerControllerFields() {
+  const form = useFormContext<SimpleServerSetupSchemaType>();
+  const type = form.watch("serverController.type");
+
+  return (
+    <>
       <FormElement
         name="serverController.type"
         label="Controller"
@@ -40,31 +62,11 @@ export default function ServerControllerForm({
         ]}
       />
 
-      {form.watch("serverController.type") === "maniacontrol" && (
-        <ManiaControlSettingsForm />
-      )}
-
-      {form.watch("serverController.type") === "evosc" && <EvoSCSettingsForm />}
-
-      {form.watch("serverController.type") === "minicontrol" && (
-        <MiniControlSettingsForm />
-      )}
-
-      {form.watch("serverController.type") === "pyplanet" && (
-        <PyPlanetSettingsForm />
-      )}
-
-      <div className="flex gap-2 justify-between">
-        <Button className="flex-1 max-w-32" variant="outline" onClick={onBack}>
-          <IconArrowNarrowLeft />
-          Previous
-        </Button>
-        <Button className="flex-1 max-w-32" type="button" onClick={onNext}>
-          Next
-          <IconArrowNarrowRight />
-        </Button>
-      </div>
-    </form>
+      {type === "maniacontrol" && <ManiaControlSettingsForm />}
+      {type === "evosc" && <EvoSCSettingsForm />}
+      {type === "minicontrol" && <MiniControlSettingsForm />}
+      {type === "pyplanet" && <PyPlanetSettingsForm />}
+    </>
   );
 }
 

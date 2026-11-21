@@ -964,6 +964,18 @@ export class SandboxedPlugin implements PluginInstance {
         );
       },
 
+      "files.scripts": async () => {
+        this.require("files:read");
+        this.limit("files");
+        return this.ctx.files.scripts();
+      },
+
+      "files.maps": async () => {
+        this.require("files:read");
+        this.limit("files");
+        return this.ctx.files.maps();
+      },
+
       notifyAdmins: async (message: unknown, description: unknown) => {
         this.require("notifications");
         this.limit("notify");

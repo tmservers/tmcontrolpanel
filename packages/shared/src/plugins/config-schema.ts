@@ -183,9 +183,11 @@ export const pluginConfigSchemaSchema = boundedSchema
     for (const [target, path] of Object.entries(schema.tmevents ?? {})) {
       const field = path
         .split(".")
-        .reduce<
-          ConfigField | undefined
-        >((parent, key) => (parent?.type === "object" ? parent.properties[key] : undefined), schema);
+        .reduce<ConfigField | undefined>(
+          (parent, key) =>
+            parent?.type === "object" ? parent.properties[key] : undefined,
+          schema,
+        );
       const list =
         target === "maps" || target === "teams" || target === "players";
       const fits =

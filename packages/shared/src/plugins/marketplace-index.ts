@@ -41,7 +41,10 @@ export const marketplacePluginSchema = z.object({
   license: z.string().max(100).optional(),
   repository: z.string().url().max(300).optional(),
   homepage: z.string().url().max(300).optional(),
-  tags: z.array(z.string().regex(/^[a-z0-9-]{1,24}$/)).max(10).default([]),
+  tags: z
+    .array(z.string().regex(/^[a-z0-9-]{1,24}$/))
+    .max(10)
+    .default([]),
   icon: reference.optional(),
   readme: reference.optional(),
   screenshots: z.array(reference).max(6).default([]),
@@ -70,7 +73,10 @@ const indexEnvelope = z.object({
 });
 
 // One broken entry must not take the whole marketplace down, so plugins are checked one by one
-export function parseMarketplaceIndex(raw: unknown): { index: MarketplaceIndex; skipped: number } {
+export function parseMarketplaceIndex(raw: unknown): {
+  index: MarketplaceIndex;
+  skipped: number;
+} {
   const envelope = indexEnvelope.parse(raw);
   const plugins: MarketplacePlugin[] = [];
   const seen = new Set<string>();
@@ -85,7 +91,9 @@ export function parseMarketplaceIndex(raw: unknown): { index: MarketplaceIndex; 
     seen.add(result.data.slug);
     plugins.push({
       ...result.data,
-      versions: [...result.data.versions].sort((a, b) => compareVersions(b.version, a.version)),
+      versions: [...result.data.versions].sort((a, b) =>
+        compareVersions(b.version, a.version),
+      ),
     });
   }
 
@@ -94,7 +102,10 @@ export function parseMarketplaceIndex(raw: unknown): { index: MarketplaceIndex; 
 
 // Resolves a reference from the index. Anything outside the index's origin is refused, so a
 // panel never downloads from hosts the index merely points at.
-export function resolveMarketplaceUrl(indexUrl: string, ref: string): string | null {
+export function resolveMarketplaceUrl(
+  indexUrl: string,
+  ref: string,
+): string | null {
   try {
     const base = new URL(indexUrl);
     const target = new URL(ref, base);
@@ -120,7 +131,9 @@ export function latestVersion(
   const candidates = plugin.versions
     .filter((v) => !v.yanked && isVersionCompatible(v, sdk))
     .sort((a, b) => compareVersions(b.version, a.version));
-  return candidates.find((v) => !isPrerelease(v.version)) ?? candidates[0] ?? null;
+  return (
+    candidates.find((v) => !isPrerelease(v.version)) ?? candidates[0] ?? null
+  );
 }
 
 export function findVersion(
@@ -130,8 +143,14 @@ export function findVersion(
   return plugin.versions.find((v) => v.version === version) ?? null;
 }
 
-export function reportPluginUrl(index: MarketplaceIndex, slug: string): string | null {
+export function reportPluginUrl(
+  index: MarketplaceIndex,
+  slug: string,
+): string | null {
   if (!index.repository?.startsWith("https://github.com/")) return null;
-  const params = new URLSearchParams({ template: "report.yml", title: `Report: ${slug}` });
+  const params = new URLSearchParams({
+    template: "report.yml",
+    title: `Report: ${slug}`,
+  });
   return `${index.repository.replace(/\/$/, "")}/issues/new?${params}`;
 }

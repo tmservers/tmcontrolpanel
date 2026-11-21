@@ -60,6 +60,8 @@ export interface PluginContext<Config = unknown> {
   readonly ui: PluginUi;
   readonly mapList: MapList;
   readonly nadeo: NadeoRecordsProvider;
+  // Capability "files:read": file manager lists, relative to the scripts or maps folder
+  readonly files: { scripts(): Promise<string[]>; maps(): Promise<string[]> };
 
   config(): Config | null;
   serverName(): string | null;

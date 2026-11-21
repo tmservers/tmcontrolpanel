@@ -25,6 +25,7 @@ export const FIRST_PARTY_PLUGIN_NAMES = [
   "ecm",
   "player-info",
   "match",
+  "game",
 ] as const;
 
 const RESERVED_SLUGS = new Set<string>([
@@ -157,6 +158,13 @@ export const pluginManifestSchema = z
         code: z.ZodIssueCode.custom,
         path: ["sdk"],
         message: "Trackmania Events imports require SDK 5",
+      });
+    }
+    if (manifest.sdk < 6 && manifest.capabilities.includes("files:read")) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["sdk"],
+        message: "The files:read capability requires SDK 6",
       });
     }
   });

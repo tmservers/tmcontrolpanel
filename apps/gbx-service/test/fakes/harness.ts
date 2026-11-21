@@ -24,6 +24,7 @@ import { FakeClock, flush } from "./clock";
 import { FakeGbxSession } from "./fake-gbx";
 import { silentLogger } from "./logger";
 import {
+  FakeFiles,
   FakeHttpClient,
   FakeNadeo,
   InMemoryJukeboxStore,
@@ -197,6 +198,7 @@ export async function createHarness(options: HarnessOptions = {}) {
   const notifications = new InMemoryNotificationRepository();
   const jukebox = new InMemoryJukeboxStore();
   const nadeo = new FakeNadeo();
+  const files = new FakeFiles();
   const sessions: FakeGbxSession[] = [];
   const pluginPackages = new InMemoryPluginPackages();
   const pluginStorage = new InMemoryPluginStorage();
@@ -278,6 +280,7 @@ export async function createHarness(options: HarnessOptions = {}) {
     jukebox,
     mapMetadata: nadeo,
     nadeo,
+    files,
     errors: options.errors,
     systemCommands: options.systemCommands,
     controller: options.controller,
@@ -306,6 +309,7 @@ export async function createHarness(options: HarnessOptions = {}) {
     notifications,
     jukebox,
     nadeo,
+    files,
     pluginPackages,
     pluginStorage,
     http,

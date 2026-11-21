@@ -391,6 +391,10 @@ export function guestRuntime(global: any): void {
       accountNames: (accountIds: string[]) =>
         callAsync("nadeo.accountNames", accountIds),
     }),
+    files: Object.freeze({
+      scripts: () => callAsync("files.scripts"),
+      maps: () => callAsync("files.maps"),
+    }),
     notifyAdmins: (message: string, description?: string) =>
       callAsync("notifyAdmins", message, description ?? null),
     server: Object.freeze({

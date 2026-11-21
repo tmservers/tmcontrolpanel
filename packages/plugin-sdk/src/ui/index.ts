@@ -10,6 +10,7 @@ export {
   type PanelTone,
   type RoundedRectProps,
 } from "./panel";
+export { Select, type SelectOption, type SelectProps } from "./select";
 export { UiTable as Table, type TableProps } from "./table";
 export { DEFAULT_THEME_DATA, kit, toKitTheme } from "./theme";
 export type { ThemeData, ThemeTokens } from "./theme";

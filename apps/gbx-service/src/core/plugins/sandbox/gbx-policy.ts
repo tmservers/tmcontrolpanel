@@ -71,7 +71,9 @@ const SCRIPT_READS: readonly string[] = [
   "Maniaplanet.Mode.GetUseTeams",
 ];
 
-export function allowedGbxMethods(capabilities: readonly string[]): Set<string> {
+export function allowedGbxMethods(
+  capabilities: readonly string[],
+): Set<string> {
   const methods = new Set(ALWAYS);
   for (const capability of capabilities) {
     for (const method of BY_CAPABILITY[capability] ?? []) methods.add(method);
@@ -80,6 +82,9 @@ export function allowedGbxMethods(capabilities: readonly string[]): Set<string> 
 }
 
 // Script reads are always fine; anything else drives the mode and needs mode:control
-export function isScriptCallAllowed(method: string, capabilities: readonly string[]): boolean {
+export function isScriptCallAllowed(
+  method: string,
+  capabilities: readonly string[],
+): boolean {
   return SCRIPT_READS.includes(method) || capabilities.includes("mode:control");
 }

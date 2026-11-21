@@ -29,6 +29,14 @@ export const validManifest = {
 };
 
 describe("capabilities", () => {
+  it("knows files:read and only allows it from SDK 6", () => {
+    expect(isCapability("files:read")).toBe(true);
+    expect(describeCapability("files:read").risk).toBe("low");
+    const files = { ...validManifest, capabilities: ["ui", "files:read"] };
+    expect(parseManifest({ ...files, sdk: 5 }).success).toBe(false);
+    expect(parseManifest({ ...files, sdk: 6 }).success).toBe(true);
+  });
+
   it("reserves Codriver's event namespace and chat commands", () => {
     expect(parseManifest({ ...validManifest, slug: "codriver" }).success).toBe(
       false,

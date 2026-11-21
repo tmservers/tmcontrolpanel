@@ -27,6 +27,7 @@ import {
 } from "./infra/db/prisma-repositories";
 import { waitForSchema } from "./infra/db/schema";
 import { PrismaSystemCommandServices } from "./infra/db/system-command-services";
+import { FileManagerClient } from "./infra/filemanager/file-manager-client";
 import { loadFirstPartyPackages } from "./infra/first-party-packages";
 import { EvotmGbxSession } from "./infra/gbx/evotm-session";
 import { HttpCodriverClient } from "./infra/http/codriver-client";
@@ -145,6 +146,7 @@ export async function createContainer(
     jukebox: new RedisJukeboxStore(redis),
     mapMetadata: nadeo,
     nadeo,
+    files: new FileManagerClient(db, process.env.SECRETS_KEY ?? ""),
     errors: sentryErrorReporter,
     systemCommands: new PrismaSystemCommandServices(db, redis),
     codriver: config.PANEL_INTERNAL_URL

@@ -1,21 +1,9 @@
 import { ModeScriptInfo } from "@/types/gbx";
 import { ServerError } from "@/types/responses";
+import { gameModeScriptFiles } from "@tmcontrolpanel/shared";
 import { reportException } from "./sentry/report";
 
-export const gameModesScripts = [
-  "Trackmania/TM_TimeAttack_Online.Script.txt",
-  "Trackmania/TM_Laps_Online.Script.txt",
-  "Trackmania/TM_Rounds_Online.Script.txt",
-  "Trackmania/TM_Cup_Online.Script.txt",
-  "Trackmania/TM_Teams_Online.Script.txt",
-  "Trackmania/TM_Knockout_Online.Script.txt",
-  "Trackmania/Deprecated/TM_Champion_Online.Script.txt",
-  "Trackmania/TM_RoyalTimeAttack_Online.Script.txt",
-  "Trackmania/TM_StuntMulti_Online.Script.txt",
-  "Trackmania/TM_Platform_Online.Script.txt",
-  "TrackMania/TM_TMWC2023_Online.Script.txt",
-  "TrackMania/TM_TMWTTeams_Online.Script.txt",
-];
+export const gameModesScripts = gameModeScriptFiles;
 
 const TimeAttackGamemode: ModeScriptInfo = {
   Name: "Trackmania/TM_TimeAttack_Online.Script.txt",

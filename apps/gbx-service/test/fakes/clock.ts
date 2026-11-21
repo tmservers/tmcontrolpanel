@@ -36,7 +36,9 @@ export class FakeClock implements Clock {
   async advance(ms: number): Promise<void> {
     const target = this.current + ms;
     while (true) {
-      const due = this.timers.filter((t) => t.at <= target).sort((a, b) => a.at - b.at)[0];
+      const due = this.timers
+        .filter((t) => t.at <= target)
+        .sort((a, b) => a.at - b.at)[0];
       if (!due) break;
       this.timers = this.timers.filter((t) => t !== due);
       this.current = due.at;

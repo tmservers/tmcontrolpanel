@@ -23,7 +23,9 @@ export class FakeGbxSession implements GbxSession {
   private callbackHandlers: GbxCallbackHandler[] = [];
   private disconnectHandlers: (() => void)[] = [];
 
-  constructor(private readonly handlers: Record<string, Handler | unknown> = {}) {}
+  constructor(
+    private readonly handlers: Record<string, Handler | unknown> = {},
+  ) {}
 
   respond(method: string, value: Handler | unknown): this {
     this.handlers[method] = value;
@@ -79,7 +81,10 @@ export class FakeGbxSession implements GbxSession {
 
   // Simulates a mode script callback with a JSON payload
   emitScript(name: string, payload: unknown = {}): void {
-    this.emit("ManiaPlanet.ModeScriptCallbackArray", [name, [JSON.stringify(payload)]]);
+    this.emit("ManiaPlanet.ModeScriptCallbackArray", [
+      name,
+      [JSON.stringify(payload)],
+    ]);
   }
 
   // Simulates the server dropping the connection
@@ -118,16 +123,23 @@ export class FakeGbxSession implements GbxSession {
   // JSON a widget update page carries in `declare Text <name> = """...""";`
   widgetJson<T = any>(id: string, name: string): T | null {
     const xml = this.lastManialink(id);
-    const match = xml && new RegExp(`declare Text ${name} = """([\\s\\S]*?)""";`).exec(xml);
+    const match =
+      xml && new RegExp(`declare Text ${name} = """([\\s\\S]*?)""";`).exec(xml);
     return match ? (JSON.parse(match[1]) as T) : null;
   }
 
-  private async resolve(method: string, params: unknown[], optional = false): Promise<unknown> {
+  private async resolve(
+    method: string,
+    params: unknown[],
+    optional = false,
+  ): Promise<unknown> {
     if (!(method in this.handlers)) {
       if (optional) return undefined;
       return true;
     }
     const handler = this.handlers[method];
-    return typeof handler === "function" ? await (handler as Handler)(...params) : handler;
+    return typeof handler === "function"
+      ? await (handler as Handler)(...params)
+      : handler;
   }
 }

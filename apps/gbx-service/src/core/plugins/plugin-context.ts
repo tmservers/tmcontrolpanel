@@ -23,6 +23,7 @@ import type {
   NadeoRecordsProvider,
   NotificationRepository,
   RecordRepository,
+  ServerFileLister,
   ServerPluginRecord,
   ServerRepository,
 } from "../ports";
@@ -56,10 +57,20 @@ export interface PluginServices {
   servers: ServerRepository;
   notifications: NotificationRepository;
   nadeo: NadeoRecordsProvider;
+  files: ServerFileLister | null;
   clock: Clock;
   manialinks: ManialinkService;
   errors: ErrorReporter;
   disablePlugin(pluginId: string, name: string, reason: string): Promise<void>;
+}
+
+function listFiles(
+  services: PluginServices,
+  list: (files: ServerFileLister) => Promise<string[]>,
+): Promise<string[]> {
+  if (!services.files)
+    return Promise.reject(new Error("File manager access is not available"));
+  return list(services.files);
 }
 
 function parseConfig(
@@ -101,6 +112,12 @@ export function createPluginContext(
     chat: services.chat,
     mapList: services.mapList,
     nadeo: services.nadeo,
+    files: {
+      scripts: () =>
+        listFiles(services, (files) => files.listScripts(services.serverId)),
+      maps: () =>
+        listFiles(services, (files) => files.listMaps(services.serverId)),
+    },
 
     config: () => config,
     serverName: services.serverName,

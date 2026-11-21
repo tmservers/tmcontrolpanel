@@ -4,6 +4,7 @@ export * from "./internal-api";
 export * from "./net/read-limited";
 export * from "./permissions";
 export * from "./plugins";
+export * from "./scripts";
 export * from "./server-events";
 export * from "./themes";
 export * from "./types/cluster";

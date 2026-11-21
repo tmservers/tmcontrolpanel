@@ -2,7 +2,7 @@
 // install time and enforced by the GBX service at runtime.
 
 // Major version of the plugin API this panel runs. A plugin built for a newer one is refused.
-export const PLUGIN_SDK_VERSION = 5;
+export const PLUGIN_SDK_VERSION = 6;
 
 export const STATIC_CAPABILITIES = [
   "ui",
@@ -15,6 +15,7 @@ export const STATIC_CAPABILITIES = [
   "mode:control",
   "notifications",
   "nadeo:read",
+  "files:read",
 ] as const;
 
 export type StaticCapability = (typeof STATIC_CAPABILITIES)[number];
@@ -83,6 +84,12 @@ export const CAPABILITY_INFO: Record<StaticCapability, CapabilityInfo> = {
     label: "Nadeo leaderboards",
     description:
       "Look up world records, personal bests and account names through the panel's Nadeo account.",
+    risk: "low",
+  },
+  "files:read": {
+    label: "List server files",
+    description:
+      "List the mode scripts and maps in this server's file manager. Contents and file manager credentials stay hidden.",
     risk: "low",
   },
 };

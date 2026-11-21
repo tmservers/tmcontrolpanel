@@ -5,7 +5,9 @@ import { Worker } from "node:worker_threads";
 // Handlebars parses templates slowly inside QuickJS (pick & ban's takes longer than a plugin call
 // may run), so templates are compiled to JavaScript here and only executed in the sandbox. A
 // hostile template can't gain anything from this: the generated code runs in the sandbox too.
-export function precompileTemplates(sources: Record<string, string>): Record<string, string> {
+export function precompileTemplates(
+  sources: Record<string, string>,
+): Record<string, string> {
   const specs: Record<string, string> = {};
   for (const [name, source] of Object.entries(sources)) {
     try {
@@ -56,7 +58,9 @@ export function precompileUntrustedTemplates(
   limits: CompileLimits = DEFAULT_COMPILE_LIMITS,
 ): Promise<Record<string, string>> {
   if (Object.keys(sources).length > limits.maxTemplates) {
-    return Promise.reject(new Error(`A plugin may have at most ${limits.maxTemplates} templates`));
+    return Promise.reject(
+      new Error(`A plugin may have at most ${limits.maxTemplates} templates`),
+    );
   }
   if (Object.keys(sources).length === 0) return Promise.resolve({});
 
@@ -79,19 +83,34 @@ export function precompileUntrustedTemplates(
       fn();
     };
     const timer = setTimeout(
-      () => finish(() => reject(new Error("Compiling the plugin's templates took too long"))),
+      () =>
+        finish(() =>
+          reject(new Error("Compiling the plugin's templates took too long")),
+        ),
       limits.timeoutMs,
     );
-    worker.once("message", (message: { specs?: Record<string, string>; error?: string }) =>
-      finish(() =>
-        message.error ? reject(new Error(message.error)) : resolve(message.specs ?? {}),
-      ),
+    worker.once(
+      "message",
+      (message: { specs?: Record<string, string>; error?: string }) =>
+        finish(() =>
+          message.error
+            ? reject(new Error(message.error))
+            : resolve(message.specs ?? {}),
+        ),
     );
     worker.once("error", (error) =>
-      finish(() => reject(new Error(`Compiling the plugin's templates failed: ${error.message}`))),
+      finish(() =>
+        reject(
+          new Error(
+            `Compiling the plugin's templates failed: ${error.message}`,
+          ),
+        ),
+      ),
     );
     worker.once("exit", (code) =>
-      finish(() => reject(new Error(`Template compiler stopped (exit ${code})`))),
+      finish(() =>
+        reject(new Error(`Template compiler stopped (exit ${code})`)),
+      ),
     );
   });
 }

@@ -291,6 +291,12 @@ export interface PluginContext<Config = Record<string, unknown>> {
     ): Promise<Record<string, number>>;
     accountNames(accountIds: string[]): Promise<Record<string, string>>;
   };
+  // Capability "files:read" (SDK 6): paths relative to the scripts or maps folder.
+  // Rejects when the server has no file manager or it can't be reached.
+  readonly files: {
+    scripts(): Promise<string[]>;
+    maps(): Promise<string[]>;
+  };
   // Capability "notifications"
   notifyAdmins(message: string, description?: string): Promise<void>;
   // Capability "mode:control"

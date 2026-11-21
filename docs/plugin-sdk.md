@@ -144,6 +144,7 @@ Callbacks may be `async`. A callback that throws or rejects is logged with the p
 | `records.local(mapUid)`, `records.forPlayers(mapUid, logins)`                                                                                                                                                                    | `records:read`  | Records stored by the panel.                                                                          |
 | `maps.findByUid(uid)`, `maps.findByFileNames(names)`                                                                                                                                                                             | `maps:read`     | Maps stored by the panel.                                                                             |
 | `nadeo.worldRecord`, `nadeo.personalBests`, `nadeo.accountNames`                                                                                                                                                                 | `nadeo:read`    | Nadeo leaderboards and names, through the panel's Nadeo account.                                      |
+| `files.scripts()`, `files.maps()`                                                                                                                                                                                                | `files:read`    | Mode script and map paths from the server's file manager (SDK 6).                                     |
 | `notifyAdmins(message, description?)`                                                                                                                                                                                            | `notifications` | A notification for the server's admins in the panel.                                                  |
 | `server.setPaused(paused)`, `server.setScriptName(script)`                                                                                                                                                                       | `mode:control`  | Pause the match, change the mode script.                                                              |
 | `gbx.call(method, ...params)`, `gbx.callScript(method, ...params)`                                                                                                                                                               | per method      | Dedicated server calls. See [Server calls](#server-calls).                                            |
@@ -167,6 +168,7 @@ Admins see these when they install the plugin, and an update that adds one needs
 | `mode:control`     | high   | `ctx.server`, mode script settings, and mode script events that change the match.                                         |
 | `notifications`    | low    | `ctx.notifyAdmins`.                                                                                                       |
 | `nadeo:read`       | low    | `ctx.nadeo`.                                                                                                              |
+| `files:read`       | low    | `ctx.files` (SDK 6): lists only, no file contents. Rejects when the server has no file manager.                           |
 | `http:<host>`      | medium | HTTPS requests to that host. `http:*.example.com` covers every subdomain. At most 10 hosts; IP addresses are not allowed. |
 
 Ask only for what the plugin needs. Reviewers turn down plugins that ask for more, and admins are less likely to install them.
@@ -400,6 +402,20 @@ export default definePlugin({
 - `kit.useTokens()` gives the raw `color` (including `accent` and `record`, also usable as `Label` tones), `font`, `opacity.surface`/`opacity.content`, and `shape.radius`/`shape.gap` tokens for anything the primitives don't cover. `ctx.ui.themeData()` returns the whole preset. Available presets include **Default** and **Broadcast**.
 - The primitives are maniatsx slots: future presets can ship their own look for them, and your widget picks it up.
 
+### Select
+
+`Select` from `@tmcontrolpanel/plugin-sdk/ui` is a dropdown built from one named entry, so the picked value arrives in `answer.entries[name]` with whatever action the player triggers next. Opening, scrolling and picking run in the game and send nothing to the server. Props: `name`, `value`, `options` (`value`, `label`, optional `detail`), `width`, and optionally `pos`, `maxVisible` (default 10), `custom` and `disabled`. `custom: { label }` adds a last option that switches to a free text entry. A `value` that isn't one of the options opens in that mode. `GAME_MODE_SCRIPTS` from `@tmcontrolpanel/plugin-sdk` lists the built-in mode scripts.
+
+```tsx
+<Select
+  name="script"
+  value={current}
+  width={50}
+  options={GAME_MODE_SCRIPTS.map((s) => ({ value: s.file, label: s.label }))}
+  custom={{ label: "Custom script…" }}
+/>
+```
+
 ### Client code
 
 Client code is TypeScript that runs in the game, compiled to ManiaScript at build time: `client.state`, `client.bind`, `client.handler` (for `onClick` and friends), `client.ref`, `client.shared`, `client.watch`, `client.onInit` and `client.onFrame`. It is a strict subset: numbers must be typed `Integer` or `Real`, there are no classes, closures, async code or try/catch, and only game API methods can be called. The build reports anything outside the subset with a file, line and a suggested fix.
@@ -541,6 +557,7 @@ Every plugin runs in its own QuickJS interpreter inside a WebAssembly instance, 
 | Widget updates                                    | 40 per second, bursts of 100 | `RateLimitError`    |
 | Storage writes                                    | 10 per second, bursts of 50  | `RateLimitError`    |
 | Web and Nadeo requests                            | 1 per second, bursts of 10   | `RateLimitError`    |
+| File manager lists                                | 1 every 2 seconds, bursts of 5 | `RateLimitError`    |
 | Admin notifications                               | 1 per minute, bursts of 3    | `RateLimitError`    |
 | Timers / handlers / widgets / calls in flight     | 100 / 1000 / 200 / 100       | `LimitError`        |
 

@@ -813,3 +813,50 @@ describe("sandboxed plugins", () => {
     ).toBe(true);
   });
 });
+
+describe("files:read", () => {
+  // Lists on an action, so each test can fill the fake file manager first
+  const listing = `const attempt = async (key, list) => {
+       try { await ctx.storage.set(key, await list()); }
+       catch (error) { await ctx.storage.set(key, error.message); }
+     };
+     ctx.action("list", async () => {
+       await attempt("scripts", () => ctx.files.scripts());
+       await attempt("maps", () => ctx.files.maps());
+     });`;
+
+  const setup = (capabilities = ["storage", "files:read"]) =>
+    createHarness({
+      packages: [{ bytes: testPackage(listing, { sdk: 6, capabilities }) }],
+      players: [player("p1")],
+    });
+
+  it("lists the server's scripts and maps through the file manager", async () => {
+    const h = await setup();
+    h.files.scripts = ["Modes/Custom.Script.txt"];
+    h.files.maps = ["Campaign/A01.Map.Gbx"];
+    await h.click("p1", "test-plugin:list");
+    expect(h.files.calls).toEqual([
+      `scripts:${SERVER_ID}`,
+      `maps:${SERVER_ID}`,
+    ]);
+    expect(stored(h, "scripts")).toEqual(["Modes/Custom.Script.txt"]);
+    expect(stored(h, "maps")).toEqual(["Campaign/A01.Map.Gbx"]);
+  });
+
+  it("refuses plugins that didn't declare files:read", async () => {
+    const h = await setup(["storage"]);
+    await h.click("p1", "test-plugin:list");
+    expect(h.files.calls).toEqual([]);
+    expect(stored(h, "scripts")).toBe(
+      'The plugin did not declare the "files:read" capability',
+    );
+  });
+
+  it("passes file manager failures on to the plugin", async () => {
+    const h = await setup();
+    h.files.fail = true;
+    await h.click("p1", "test-plugin:list");
+    expect(stored(h, "scripts")).toBe("This server has no file manager");
+  });
+});

@@ -1,8 +1,14 @@
 import { PLUGIN_SDK_VERSION } from "@tmcontrolpanel/shared";
-import { readPluginPackage, type PluginPackage } from "@tmcontrolpanel/shared/plugin-package";
+import {
+  readPluginPackage,
+  type PluginPackage,
+} from "@tmcontrolpanel/shared/plugin-package";
 import type { PluginPackageRepository, ServerPluginRecord } from "../../ports";
 import type { PluginDefinition } from "../sdk";
-import { sandboxedDefinition, type SandboxDependencies } from "./sandboxed-plugin";
+import {
+  sandboxedDefinition,
+  type SandboxDependencies,
+} from "./sandboxed-plugin";
 import { precompileUntrustedTemplates } from "./templates";
 
 interface LoadedPackage {
@@ -22,36 +28,55 @@ export class PackageLoader {
     private readonly deps: SandboxDependencies,
   ) {}
 
-  async resolve(record: ServerPluginRecord): Promise<PluginDefinition<unknown> | null> {
+  async resolve(
+    record: ServerPluginRecord,
+  ): Promise<PluginDefinition<unknown> | null> {
     const ref = record.package;
     if (!ref) return null;
     if (ref.yanked) {
-      throw new Error(`${record.name}@${ref.version} was withdrawn from the marketplace`);
+      throw new Error(
+        `${record.name}@${ref.version} was withdrawn from the marketplace`,
+      );
     }
 
     let loaded = this.cache.get(ref.sha256);
     if (!loaded) {
       const bytes = await this.packages.loadPackage(ref.versionId);
-      if (!bytes) throw new Error(`Package ${record.name}@${ref.version} is missing from the database`);
+      if (!bytes)
+        throw new Error(
+          `Package ${record.name}@${ref.version} is missing from the database`,
+        );
 
       const pkg = readPluginPackage(bytes);
       if (pkg.sha256 !== ref.sha256) {
-        throw new Error(`Package ${record.name}@${ref.version} does not match its checksum`);
+        throw new Error(
+          `Package ${record.name}@${ref.version} does not match its checksum`,
+        );
       }
-      loaded = { pkg, templates: await precompileUntrustedTemplates(pkg.templates) };
+      loaded = {
+        pkg,
+        templates: await precompileUntrustedTemplates(pkg.templates),
+      };
       this.remember(ref.sha256, loaded);
     }
     const { pkg, templates } = loaded;
 
     if (pkg.manifest.slug !== record.name) {
-      throw new Error(`Package ${pkg.manifest.slug} is installed as ${record.name}`);
+      throw new Error(
+        `Package ${pkg.manifest.slug} is installed as ${record.name}`,
+      );
     }
     if (pkg.manifest.sdk > PLUGIN_SDK_VERSION) {
       throw new Error(
         `${record.name}@${ref.version} needs plugin SDK ${pkg.manifest.sdk}, this service runs ${PLUGIN_SDK_VERSION}`,
       );
     }
-    return sandboxedDefinition(pkg, templates, { ...record, package: ref }, this.deps);
+    return sandboxedDefinition(
+      pkg,
+      templates,
+      { ...record, package: ref },
+      this.deps,
+    );
   }
 
   private remember(sha256: string, pkg: LoadedPackage): void {

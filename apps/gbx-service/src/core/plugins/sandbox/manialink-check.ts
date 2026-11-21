@@ -1,7 +1,11 @@
 // Pages rendered by a sandboxed plugin are sent to every player, so they may only contain the
 // plugin's own manialink: one <manialink> element whose id is the namespaced page id. Without
 // this a plugin could replace another plugin's widgets on the players' clients.
-export function checkManialink(xml: unknown, expectedId: string, maxBytes: number): string | null {
+export function checkManialink(
+  xml: unknown,
+  expectedId: string,
+  maxBytes: number,
+): string | null {
   if (typeof xml !== "string") return "A page must be a string";
   if (Buffer.byteLength(xml, "utf8") > maxBytes) {
     return `A page may be at most ${Math.round(maxBytes / 1024)} KB`;

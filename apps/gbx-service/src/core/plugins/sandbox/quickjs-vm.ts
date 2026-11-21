@@ -25,7 +25,11 @@ export class SandboxFault extends Error {
 
 // An ordinary exception thrown by plugin code
 export class GuestError extends Error {
-  constructor(name: string, message: string, readonly guestStack?: string) {
+  constructor(
+    name: string,
+    message: string,
+    readonly guestStack?: string,
+  ) {
     super(message);
     this.name = name || "Error";
   }
@@ -106,7 +110,12 @@ export class QuickJsVm {
       } finally {
         fn.dispose();
         for (const handle of handles) {
-          if (handle.alive && handle !== this.vm.true && handle !== this.vm.false) handle.dispose();
+          if (
+            handle.alive &&
+            handle !== this.vm.true &&
+            handle !== this.vm.false
+          )
+            handle.dispose();
         }
       }
     });
@@ -137,26 +146,38 @@ export class QuickJsVm {
 
   private installHostFunctions(): void {
     const { vm } = this;
-    const hostCall = vm.newFunction("__host_call", (methodHandle, argsHandle) => {
-      let response: string;
-      try {
-        const value = this.options.onHostCall(vm.getString(methodHandle), vm.getString(argsHandle));
-        response = JSON.stringify({ ok: true, value: value === undefined ? null : value });
-      } catch (error) {
-        response = JSON.stringify({ ok: false, error: describeError(error) });
-      }
-      return vm.newString(response);
-    });
+    const hostCall = vm.newFunction(
+      "__host_call",
+      (methodHandle, argsHandle) => {
+        let response: string;
+        try {
+          const value = this.options.onHostCall(
+            vm.getString(methodHandle),
+            vm.getString(argsHandle),
+          );
+          response = JSON.stringify({
+            ok: true,
+            value: value === undefined ? null : value,
+          });
+        } catch (error) {
+          response = JSON.stringify({ ok: false, error: describeError(error) });
+        }
+        return vm.newString(response);
+      },
+    );
     vm.setProp(vm.global, "__host_call", hostCall);
     hostCall.dispose();
 
-    const hostAsync = vm.newFunction("__host_async", (idHandle, methodHandle, argsHandle) => {
-      this.options.onHostAsync(
-        vm.getNumber(idHandle),
-        vm.getString(methodHandle),
-        vm.getString(argsHandle),
-      );
-    });
+    const hostAsync = vm.newFunction(
+      "__host_async",
+      (idHandle, methodHandle, argsHandle) => {
+        this.options.onHostAsync(
+          vm.getNumber(idHandle),
+          vm.getString(methodHandle),
+          vm.getString(argsHandle),
+        );
+      },
+    );
     vm.setProp(vm.global, "__host_async", hostAsync);
     hostAsync.dispose();
   }
@@ -174,15 +195,20 @@ export class QuickJsVm {
   }
 
   private enter<T>(budgetMs: number, fn: () => T): T {
-    if (this.disposed) throw new SandboxFault("crash", "The sandbox was disposed");
+    if (this.disposed)
+      throw new SandboxFault("crash", "The sandbox was disposed");
     const started = this.options.now();
     this.deadline = started + budgetMs;
     try {
       return fn();
     } catch (error) {
-      if (error instanceof SandboxFault || error instanceof GuestError) throw error;
+      if (error instanceof SandboxFault || error instanceof GuestError)
+        throw error;
       // The WebAssembly instance aborted; nothing in it can be trusted any more
-      throw new SandboxFault("crash", `The sandbox crashed: ${describeError(error).message}`);
+      throw new SandboxFault(
+        "crash",
+        `The sandbox crashed: ${describeError(error).message}`,
+      );
     } finally {
       this.deadline = Number.POSITIVE_INFINITY;
       this.options.onCpu(Math.max(0, this.options.now() - started));
@@ -196,16 +222,31 @@ export class QuickJsVm {
     } finally {
       handle.dispose();
     }
-    const name = raw && typeof raw === "object" && typeof raw.name === "string" ? raw.name : "Error";
+    const name =
+      raw && typeof raw === "object" && typeof raw.name === "string"
+        ? raw.name
+        : "Error";
     const message =
-      raw && typeof raw === "object" && typeof raw.message === "string" ? raw.message : String(raw);
+      raw && typeof raw === "object" && typeof raw.message === "string"
+        ? raw.message
+        : String(raw);
     if (name === "InternalError" && message === "interrupted") {
-      return new SandboxFault("timeout", "The plugin ran longer than its time limit");
+      return new SandboxFault(
+        "timeout",
+        "The plugin ran longer than its time limit",
+      );
     }
     if (message === "out of memory") {
-      return new SandboxFault("memory", "The plugin used more memory than its limit");
+      return new SandboxFault(
+        "memory",
+        "The plugin used more memory than its limit",
+      );
     }
-    return new GuestError(name, message, typeof raw?.stack === "string" ? raw.stack : undefined);
+    return new GuestError(
+      name,
+      message,
+      typeof raw?.stack === "string" ? raw.stack : undefined,
+    );
   }
 
   private isPromise(handle: QuickJSHandle): boolean {
@@ -237,7 +278,11 @@ export class QuickJsVm {
   }
 }
 
-export function describeError(error: unknown): { name: string; message: string } {
-  if (error instanceof Error) return { name: error.name, message: error.message };
+export function describeError(error: unknown): {
+  name: string;
+  message: string;
+} {
+  if (error instanceof Error)
+    return { name: error.name, message: error.message };
   return { name: "Error", message: String(error) };
 }

@@ -50,6 +50,7 @@ import {
   type NotificationRepository,
   type PlayerRepository,
   type RecordRepository,
+  type ServerFileLister,
   type ServerRecord,
   type ServerRepository,
   type UserRepository,
@@ -86,6 +87,8 @@ export interface RuntimeDependencies {
   jukebox: JukeboxStore;
   mapMetadata: MapMetadataProvider;
   nadeo: NadeoRecordsProvider;
+  // File manager lists for the files:read capability
+  files?: ServerFileLister;
   // Where plugins' captureException goes; reports are dropped without it
   errors?: ErrorReporter;
   connectTimeoutMs?: number;
@@ -274,6 +277,7 @@ export class ServerRuntime {
             servers: deps.servers,
             notifications: deps.notifications,
             nadeo: deps.nadeo,
+            files: deps.files ?? null,
             clock,
             manialinks: this.manialinks,
             errors: deps.errors ?? noopErrorReporter,

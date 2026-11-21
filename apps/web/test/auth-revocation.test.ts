@@ -33,6 +33,7 @@ const row = {
   groupMembers: [],
   userServers: [],
   hetznerProjectUsers: [],
+  ownedHetznerProjects: [],
 };
 const token = {
   id: "u",

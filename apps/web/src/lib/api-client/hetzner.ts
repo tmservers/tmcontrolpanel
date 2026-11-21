@@ -1,9 +1,11 @@
 import type * as Locations from "@/services/hetzner/locations";
 import type * as Networks from "@/services/hetzner/networks";
 import type * as ServerActions from "@/services/hetzner/server-actions";
+import type * as ServerLinks from "@/services/hetzner/server-links";
 import type * as ServerTypes from "@/services/hetzner/server-types";
 import type * as Servers from "@/services/hetzner/servers";
 import type * as SshKeys from "@/services/hetzner/ssh-keys";
+import type * as Tokens from "@/services/hetzner/tokens";
 import { apiGet } from "./http";
 
 const project = (projectId: string) =>
@@ -55,3 +57,13 @@ export const getHetznerServerMetrics = (
     start: start.toISOString(),
     end: end.toISOString(),
   });
+
+export const getHetznerServerLinks = (
+  signal?: AbortSignal,
+): ReturnType<typeof ServerLinks.getHetznerServerLinks> =>
+  apiGet("/api/hetzner/server-links", undefined, { signal });
+
+export const getMyHetznerTokens = (
+  signal?: AbortSignal,
+): ReturnType<typeof Tokens.getMyHetznerTokens> =>
+  apiGet("/api/hetzner/tokens", undefined, { signal, dates: true });

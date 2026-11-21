@@ -107,22 +107,6 @@ export const roleInput = z
   })
   .strict();
 
-const projectUser = z
-  .object({ userId: id, role: z.enum(["Admin", "Moderator"]) })
-  .strict();
-
-export const createProjectInput = z
-  .object({
-    name,
-    apiTokens: z.array(z.string().trim().min(1).max(500)).max(50).optional(),
-    hetznerProjectUsers: z.array(projectUser).max(500).optional(),
-  })
-  .strict();
-
-export const updateProjectInput = createProjectInput
-  .extend({ name: name.optional() })
-  .strict();
-
 // Parses an action's input; a bad request becomes a ValidationError for the caller
 export function parseInput<S extends z.ZodType>(
   schema: S,

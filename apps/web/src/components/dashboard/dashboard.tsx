@@ -16,13 +16,13 @@ import {
   useDashboardAdminStats,
   useDashboardHetzner,
 } from "@/hooks/use-dashboard";
+import { HETZNER_STATUS_VARIANT } from "@/lib/hetzner-link";
 import { cn, generatePath, hasPermissionSync } from "@/lib/utils";
 import { useServers } from "@/providers/servers-provider";
 import { routePermissions, routes } from "@/routes";
 import type {
   DashboardAdminStats,
   DashboardHetznerProject,
-  DashboardHetznerServer,
 } from "@/services/dashboard";
 import {
   IconActivity,
@@ -222,21 +222,6 @@ function ServersCard({
   );
 }
 
-const STATUS_VARIANT: Record<
-  DashboardHetznerServer["status"],
-  "default" | "secondary" | "destructive" | "outline"
-> = {
-  running: "default",
-  off: "secondary",
-  initializing: "outline",
-  starting: "outline",
-  stopping: "outline",
-  migrating: "outline",
-  rebuilding: "outline",
-  deleting: "destructive",
-  unknown: "destructive",
-};
-
 function HetznerCard({ session }: { session: Session }) {
   const { data, isLoading, isError, error } = useDashboardHetzner();
 
@@ -328,7 +313,7 @@ function HetznerProject({
                   {server.ipv4 && ` · ${server.ipv4}`}
                 </span>
               </div>
-              <Badge variant={STATUS_VARIANT[server.status]}>
+              <Badge variant={HETZNER_STATUS_VARIANT[server.status]}>
                 {server.status}
               </Badge>
             </li>

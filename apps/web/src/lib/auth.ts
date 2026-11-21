@@ -6,6 +6,7 @@ import {
   upsertUserAuth,
   UsersWithGroupsWithServers,
 } from "@/actions/database/server-only/auth";
+import { mergeHetznerProjectAccess } from "@/lib/hetzner-access";
 import { UserGroup } from "@/types/auth";
 import { ServerError } from "@/types/responses";
 import { GroupRole } from "@tmcontrolpanel/db";
@@ -217,11 +218,17 @@ export const authOptions: NextAuthOptions = {
             serversOrder: g.serversOrder?.split(",") || [],
           }),
         );
-      token.projects = dbUser.hetznerProjectUsers.map((p) => ({
-        id: p.project.id,
-        name: p.project.name,
-        role: p.role,
-      }));
+      token.projects = mergeHetznerProjectAccess({
+        direct: dbUser.hetznerProjectUsers.map((p) => ({
+          ...p.project,
+          role: p.role,
+        })),
+        owned: dbUser.ownedHetznerProjects,
+        groups: dbUser.groupMembers.map((g) => ({
+          role: g.role,
+          projects: g.group.groupHetznerProjects.map((gp) => gp.project),
+        })),
+      });
       token.servers = dbUser.userServers.map((s) => ({
         id: s.server.id,
         name: s.server.name,

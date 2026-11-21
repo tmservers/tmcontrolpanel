@@ -1,3 +1,8 @@
+import {
+  groupHetznerProjectsSelect,
+  hetznerAccessSelect,
+  mergeHetznerProjectAccess,
+} from "@/lib/hetzner-access";
 import { ServerError, ServerResponse } from "@/types/responses";
 import {
   hasPermission,
@@ -78,10 +83,12 @@ export async function actorForLogin(login: string): Promise<Actor> {
                 where: { server: { deletedAt: null } },
                 select: { server: { select: { id: true, name: true } } },
               },
+              ...groupHetznerProjectsSelect,
             },
           },
         },
       },
+      ...hetznerAccessSelect,
       hetznerProjectUsers: {
         where: { project: { deletedAt: null } },
         select: { role: true, project: { select: { id: true, name: true } } },
@@ -127,10 +134,17 @@ export async function actorForLogin(login: string): Promise<Actor> {
     permissions: getList<string>(user.permissions),
     servers: user.userServers.map((us) => ({ ...us.server, role: us.role })),
     groups,
-    projects: user.hetznerProjectUsers.map((hp) => ({
-      ...hp.project,
-      role: hp.role,
-    })),
+    projects: mergeHetznerProjectAccess({
+      direct: user.hetznerProjectUsers.map((hp) => ({
+        ...hp.project,
+        role: hp.role,
+      })),
+      owned: user.ownedHetznerProjects,
+      groups: user.groupMembers.map((member) => ({
+        role: member.role,
+        projects: member.group.groupHetznerProjects.map((gp) => gp.project),
+      })),
+    }),
   });
 
   return {

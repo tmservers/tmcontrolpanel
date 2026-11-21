@@ -17,7 +17,6 @@ import {
 import { routes } from "@/routes";
 import {
   IconClipboardText,
-  IconCloud,
   IconKey,
   IconLogs,
   IconRobot,
@@ -73,13 +72,7 @@ export default async function NavAdmin({
         name: "Servers",
         url: routes.admin.servers,
         icon: IconServerCog,
-        auth: canViewServers,
-      },
-      {
-        name: "Hetzner",
-        url: routes.admin.hetzner,
-        icon: IconCloud,
-        auth: canViewHetzner,
+        auth: canViewServers || canViewHetzner,
       },
       {
         name: "Audit Logs",

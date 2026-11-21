@@ -1,55 +1,31 @@
 import { doServerActionWithAuth } from "@/lib/actions";
 import { getClient } from "@/lib/dbclient";
-import { decryptHetznerToken } from "@/lib/hetzner";
-import { getList, hasPermissionSync } from "@/lib/utils";
 import { PaginationResponse, ServerResponse } from "@/types/responses";
 import { PaginationState } from "@tanstack/react-table";
 import { Prisma } from "@tmcontrolpanel/db";
 import "server-only";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const editHetznerProject = Prisma.validator<Prisma.HetznerProjectsInclude>()({
-  hetznerProjectUsers: {
-    select: {
-      userId: true,
-      role: true,
-    },
+// Tokens are left out on purpose: group admins manage servers, never the owner's token
+const projectListSelect = Prisma.validator<Prisma.HetznerProjectsSelect>()({
+  id: true,
+  name: true,
+  createdAt: true,
+  owner: { select: { id: true, nickName: true } },
+  groupHetznerProjects: {
+    where: { group: { deletedAt: null } },
+    select: { group: { select: { id: true, name: true } } },
   },
 });
 
-export type EditHetznerProjects = Prisma.HetznerProjectsGetPayload<{
-  include: typeof editHetznerProject;
-}>;
-
-export const hetznerProjectUsersSchema =
-  Prisma.validator<Prisma.HetznerProjectsInclude>()({
-    hetznerProjectUsers: {
-      include: {
-        user: {
-          select: {
-            id: true,
-            login: true,
-            nickName: true,
-          },
-        },
-      },
-    },
-    _count: {
-      select: {
-        hetznerProjectUsers: true,
-      },
-    },
-  });
-
-export type HetznerProjectsWithUsers = Prisma.HetznerProjectsGetPayload<{
-  include: typeof hetznerProjectUsersSchema;
+export type HetznerProjectListItem = Prisma.HetznerProjectsGetPayload<{
+  select: typeof projectListSelect;
 }>;
 
 export async function getHetznerProjectsPaginated(
   pagination: PaginationState,
   sorting: { field: string; order: "asc" | "desc" },
   filter?: string,
-): Promise<ServerResponse<PaginationResponse<HetznerProjectsWithUsers>>> {
+): Promise<ServerResponse<PaginationResponse<HetznerProjectListItem>>> {
   return doServerActionWithAuth(
     ["hetzner:view", "hetzner:create", "hetzner::moderator", "hetzner::admin"],
     async (session) => {
@@ -84,38 +60,13 @@ export async function getHetznerProjectsPaginated(
 
       const projects = await db.hetznerProjects.findMany({
         where,
-        include: hetznerProjectUsersSchema,
+        select: projectListSelect,
         orderBy: { [sorting.field]: sorting.order },
         skip: pagination.pageIndex * pagination.pageSize,
         take: pagination.pageSize,
       });
 
-      return {
-        totalCount,
-        data: projects.map((project) => ({
-          ...project,
-          apiTokens: hasPermissionSync(
-            session,
-            ["hetzner:edit", "hetzner:id:admin"],
-            project.id,
-          )
-            ? getList<string>(project.apiTokens).map((token) =>
-                // An unreadable token shows up empty, so it has to be entered again
-                tryDecrypt(token),
-              )
-            : Array.from({ length: getList(project.apiTokens).length }, () =>
-                crypto.randomUUID(),
-              ),
-        })),
-      };
+      return { totalCount, data: projects };
     },
   );
-}
-
-function tryDecrypt(token: string): string {
-  try {
-    return decryptHetznerToken(token);
-  } catch {
-    return "";
-  }
 }

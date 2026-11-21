@@ -82,7 +82,6 @@ vi.mock("@/lib/hetzner", () => ({
 }));
 
 import { updateGroup } from "@/actions/database/groups";
-import { updateHetznerProject } from "@/actions/database/hetzner-projects";
 import { deleteMatch } from "@/actions/database/matches";
 import { adminAuditScope } from "@/actions/database/server-only/audit-scope";
 import {
@@ -218,19 +217,6 @@ describe("user actions", () => {
       where: { id: "other", deletedAt: null },
       data: { admin: false, permissions: ["users:edit"] },
     });
-  });
-});
-
-describe("hetzner projects", () => {
-  it("keeps tokens when omitted and keeps them out of the audit log", async () => {
-    await updateHetznerProject("p1", { name: "Renamed" } as never);
-    expect(mocks.hetznerProjects.update.mock.calls[0][0].data).toEqual({
-      name: "Renamed",
-    });
-
-    await updateHetznerProject("p1", { apiTokens: ["tok-123"] } as never);
-    const details = mocks.audit.mock.calls.at(-1)![3];
-    expect(JSON.stringify(details)).not.toContain("tok-123");
   });
 });
 

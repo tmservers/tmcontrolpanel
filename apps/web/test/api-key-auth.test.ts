@@ -66,6 +66,7 @@ function groupKey(overrides: Record<string, unknown> = {}) {
       id: "group-1",
       name: "League",
       deletedAt: null,
+      groupHetznerProjects: [],
       groupServers: [{ server: serverA }, { server: serverB }],
     },
     ...overrides,
@@ -82,6 +83,7 @@ function creator(overrides: Record<string, unknown> = {}) {
     userServers: [],
     groupMembers: [],
     hetznerProjectUsers: [],
+    ownedHetznerProjects: [],
     ...overrides,
   };
 }
@@ -96,6 +98,7 @@ const groupMember = (role: string) =>
         group: {
           id: "group-1",
           name: "League",
+          groupHetznerProjects: [],
           groupServers: [{ server: serverA }, { server: serverB }],
         },
       },
@@ -156,7 +159,13 @@ describe("authenticateApiKey", () => {
       "a deleted group",
       header,
       groupKey({
-        group: { id: "group-1", name: "", deletedAt: NOW, groupServers: [] },
+        group: {
+          id: "group-1",
+          name: "",
+          deletedAt: NOW,
+          groupHetznerProjects: [],
+          groupServers: [],
+        },
       }),
     ],
   ])("rejects %s", async (_, auth, row) => {
@@ -239,6 +248,7 @@ describe("authenticateApiKey", () => {
           id: "group-1",
           name: "League",
           deletedAt: null,
+          groupHetznerProjects: [],
           groupServers: [{ server: serverB }, { server: serverC }],
         },
       }),

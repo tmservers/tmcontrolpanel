@@ -7,55 +7,107 @@ import { redirect } from "next/navigation";
 import { createActions } from "./actions";
 import AdminClusterPage from "./cluster";
 import { createColumns } from "./columns";
+import { createHetznerActions } from "./hetzner-actions";
+import { createHetznerColumns } from "./hetzner-columns";
 
-export default async function AdminServersPage() {
-  const canView = await hasPermission(routePermissions.admin.servers.view);
-  if (!canView) {
+const TABS = ["servers", "hetzner", "cluster"] as const;
+type Tab = (typeof TABS)[number];
+
+export default async function AdminServersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const canViewServers = await hasPermission(
+    routePermissions.admin.servers.view,
+  );
+  const canViewHetzner = await hasPermission(
+    routePermissions.admin.hetzner.view,
+  );
+  if (!canViewServers && !canViewHetzner) {
     redirect(routes.dashboard);
   }
 
-  const canCreate = await hasPermission(routePermissions.admin.servers.create);
-  const canViewClients = (await auth())?.user.admin === true;
+  const session = await auth();
+  const canViewCluster = session?.user.admin === true;
 
-  const { data: recentlyCreatedServers } =
-    await getRecentlyCreatedHetznerServers();
+  const visible: Record<Tab, boolean> = {
+    servers: canViewServers,
+    hetzner: canViewHetzner,
+    cluster: canViewCluster,
+  };
+  const { tab } = await searchParams;
+  const defaultTab =
+    TABS.find((t) => t === tab && visible[t]) ??
+    TABS.find((t) => visible[t]) ??
+    "servers";
+
+  const [canCreateServer, canCreateProject, canManageCluster] =
+    await Promise.all([
+      hasPermission(routePermissions.admin.servers.create),
+      hasPermission(routePermissions.admin.hetzner.create),
+      hasPermission(routePermissions.admin.servers.clients.manage),
+    ]);
+
+  const recentlyCreatedServers = canViewServers
+    ? (await getRecentlyCreatedHetznerServers()).data
+    : [];
+
+  const serversTable = (
+    <PaginationTable
+      createColumns={createColumns}
+      endpoint="/api/servers"
+      actions={createActions}
+      actionsAllowed={canCreateServer}
+      actionsArgs={{ recentlyCreatedServers }}
+      filter
+    />
+  );
+
+  const hetznerTable = (
+    <PaginationTable
+      endpoint="/api/hetzner/projects"
+      createColumns={createHetznerColumns}
+      actions={createHetznerActions}
+      actionsAllowed={canCreateProject}
+      filter
+    />
+  );
+
+  const tabCount = Object.values(visible).filter(Boolean).length;
+  if (tabCount === 1) {
+    return (
+      <div className="flex flex-col gap-6">
+        {canViewServers ? serversTable : hetznerTable}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
-      {canViewClients ? (
-        <Tabs defaultValue="servers" className="w-full">
-          <TabsList className="w-full">
-            <TabsTrigger value="servers">Servers</TabsTrigger>
-            <TabsTrigger value="cluster">Cluster</TabsTrigger>
-          </TabsList>
+      <Tabs defaultValue={defaultTab} className="w-full">
+        <TabsList className="w-full">
+          {canViewServers && <TabsTrigger value="servers">Servers</TabsTrigger>}
+          {canViewHetzner && (
+            <TabsTrigger value="hetzner">Hetzner Cloud</TabsTrigger>
+          )}
+          {canViewCluster && <TabsTrigger value="cluster">Cluster</TabsTrigger>}
+        </TabsList>
 
-          <TabsContent value="servers">
-            <PaginationTable
-              createColumns={createColumns}
-              endpoint="/api/servers"
-              actions={createActions}
-              actionsAllowed={canCreate}
-              actionsArgs={{ recentlyCreatedServers }}
-              filter
-            />
-          </TabsContent>
+        {canViewServers && (
+          <TabsContent value="servers">{serversTable}</TabsContent>
+        )}
 
+        {canViewHetzner && (
+          <TabsContent value="hetzner">{hetznerTable}</TabsContent>
+        )}
+
+        {canViewCluster && (
           <TabsContent value="cluster">
-            <AdminClusterPage
-              canManage={await hasPermission(["servers:clients:manage"])}
-            />
+            <AdminClusterPage canManage={canManageCluster} />
           </TabsContent>
-        </Tabs>
-      ) : (
-        <PaginationTable
-          createColumns={createColumns}
-          endpoint="/api/servers"
-          actions={createActions}
-          actionsAllowed={canCreate}
-          actionsArgs={{ recentlyCreatedServers }}
-          filter
-        />
-      )}
+        )}
+      </Tabs>
     </div>
   );
 }

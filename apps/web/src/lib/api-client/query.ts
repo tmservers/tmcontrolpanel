@@ -46,6 +46,8 @@ export const queryKeys = {
   serversMinimal: ["servers", "minimal"] as const,
   users: (field: string, ids: string[]) => ["users", field, ...ids] as const,
   displayNames: (logins: string[]) => ["displayNames", ...logins] as const,
+  hetznerServerLinks: ["hetzner", "server-links"] as const,
+  hetznerTokens: ["hetzner", "tokens"] as const,
   hetzner: (projectId: string, what: string) =>
     ["hetzner", projectId, what] as const,
   tmeventsStatus: () => ["tmevents", "status"] as const,

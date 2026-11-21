@@ -23,7 +23,7 @@ export const routes = {
     servers: "/admin/servers",
     groups: "/admin/groups",
     roles: "/admin/roles",
-    hetzner: "/admin/hetzner",
+    hetzner: "/admin/servers?tab=hetzner",
     hetznerServers: "/admin/hetzner/:id",
     auditLogs: "/admin/audit-logs",
     codriver: "/admin/codriver",
@@ -417,24 +417,17 @@ export const breadCrumbs: {
     ],
   },
   {
-    path: routes.admin.hetzner,
-    breadCrumbs: [
-      {
-        label: "Admin",
-      },
-      {
-        label: "Hetzner",
-      },
-    ],
-  },
-  {
     path: routes.admin.hetznerServers,
     breadCrumbs: [
       {
         label: "Admin",
       },
       {
-        label: "Hetzner",
+        label: "Servers",
+        path: routes.admin.servers,
+      },
+      {
+        label: "Hetzner Cloud",
         path: routes.admin.hetzner,
       },
       {

@@ -2,6 +2,8 @@ import {
   getAllDatabases,
   getAllNetworks,
   getHetznerLocations,
+  getHetznerServerLinks,
+  getMyHetznerTokens,
   getServerTypes,
   getSSHKeys,
 } from "@/lib/api-client/hetzner";
@@ -52,4 +54,22 @@ export const useHetznerDatabases = (projectId: string) =>
     queryFn: () => unwrap(getAllDatabases(projectId), "GetAllDatabasesError"),
     gcTime: 0,
     enabled: !!projectId,
+  });
+
+// Every page of every project costs API calls, so the cards don't refetch on each visit
+export const useHetznerServerLinks = (enabled = true) =>
+  useQuery({
+    queryKey: queryKeys.hetznerServerLinks,
+    queryFn: ({ signal }) =>
+      unwrap(getHetznerServerLinks(signal), "GetHetznerServerLinksError"),
+    staleTime: 60 * 1000,
+    enabled,
+  });
+
+export const useMyHetznerTokens = (enabled = true) =>
+  useQuery({
+    queryKey: queryKeys.hetznerTokens,
+    queryFn: ({ signal }) =>
+      unwrap(getMyHetznerTokens(signal), "GetMyHetznerTokensError"),
+    enabled,
   });

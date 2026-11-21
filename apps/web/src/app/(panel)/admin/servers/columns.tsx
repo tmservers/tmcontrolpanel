@@ -1,28 +1,16 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 "use client";
 
-import { deleteServer } from "@/actions/database/servers";
-import type { ServersWithUsers } from "@/services/database/servers";
-import ConfirmModal from "@/components/modals/confirm-modal";
-import Modal from "@/components/modals/modal";
-import EditServerModal from "@/components/modals/servers/edit-server";
 import { DataTableColumnHeader } from "@/components/table/data-table-column-header";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { getErrorMessage, hasPermissionSync } from "@/lib/utils";
-import { routePermissions } from "@/routes";
-import { ServerError } from "@/types/responses";
+import { Badge } from "@/components/ui/badge";
+import { useHetznerServerLinks } from "@/hooks/use-hetzner-queries";
+import { findHetznerServer, HETZNER_STATUS_VARIANT } from "@/lib/hetzner-link";
+import { useServers } from "@/providers/servers-provider";
+import type { ServersWithUsers } from "@/services/database/servers";
 import { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { useState, useTransition } from "react";
-import { toast } from "sonner";
+import { useState } from "react";
+import ServerActionsMenu from "./server-actions-menu";
 
 export const createColumns = (
   refetch: () => void,
@@ -34,22 +22,56 @@ export const createColumns = (
     ),
   },
   {
+    id: "status",
+    header: "Status",
+    cell: ({ row }) => {
+      const { servers } = useServers();
+      const live = servers.find((s) => s.id === row.original.id);
+      // Only servers the user can open are in the live list
+      if (!live) return null;
+      return live.isConnected ? (
+        <Badge>Online</Badge>
+      ) : (
+        <Badge variant="secondary">Offline</Badge>
+      );
+    },
+  },
+  {
     accessorKey: "description",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Description" />
     ),
   },
   {
-    accessorKey: "host",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Host" />
+    id: "address",
+    header: "Address",
+    cell: ({ row }) => (
+      <span>
+        {row.original.host}:{row.original.port}
+      </span>
     ),
   },
   {
-    accessorKey: "port",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Port" />
-    ),
+    id: "hetzner",
+    header: "Hetzner",
+    cell: ({ row }) => {
+      const { data: session } = useSession();
+      // Shares the cached query, so each row doesn't call Hetzner again
+      const links = useHetznerServerLinks(
+        (session?.user.projects.length ?? 0) > 0,
+      );
+      const server =
+        links.data && findHetznerServer(row.original.host, links.data.servers);
+      if (!server) return null;
+      return (
+        <div className="flex items-center gap-2">
+          <span className="truncate">{server.name}</span>
+          <Badge variant={HETZNER_STATUS_VARIANT[server.status]}>
+            {server.status}
+          </Badge>
+        </div>
+      );
+    },
   },
   {
     accessorKey: "filemanagerUrl",
@@ -60,7 +82,7 @@ export const createColumns = (
   {
     accessorKey: "createdAt",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={"Created At"} />
+      <DataTableColumnHeader column={column} title="Created At" />
     ),
     cell: ({ row }) => {
       const date = row.original.createdAt;
@@ -74,93 +96,15 @@ export const createColumns = (
   {
     id: "actions",
     cell: ({ row }) => {
-      const server = row.original;
-      const { data: session } = useSession();
-      const [_, startTransition] = useTransition();
-      const [isOpen, setIsOpen] = useState(false);
       const [editIsOpen, setEditIsOpen] = useState(false);
-
-      const canEdit = hasPermissionSync(
-        session,
-        routePermissions.admin.servers.edit,
-        server.id,
-      );
-      const canDelete = hasPermissionSync(
-        session,
-        routePermissions.admin.servers.delete,
-        server.id,
-      );
-
-      const handleDelete = () => {
-        if (!canDelete) {
-          toast.error("You do not have permission to delete this server.");
-          return;
-        }
-
-        startTransition(async () => {
-          try {
-            const { error } = await deleteServer(server.id);
-            if (error) {
-              throw new ServerError(error, "DeleteServerError");
-            }
-            refetch();
-            toast.success("Server successfully deleted");
-          } catch (error) {
-            toast.error("Error deleting server", {
-              description: getErrorMessage(error),
-            });
-          }
-        });
-      };
-
-      if (!canEdit && !canDelete) {
-        return null;
-      }
-
       return (
         <div className="flex justify-end">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {canEdit && (
-                <DropdownMenuItem onClick={() => setEditIsOpen(true)}>
-                  Edit server
-                </DropdownMenuItem>
-              )}
-              {canEdit && canDelete && <DropdownMenuSeparator />}
-              {canDelete && (
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={() => setIsOpen(true)}
-                >
-                  Delete server
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {canDelete && (
-            <ConfirmModal
-              isOpen={isOpen}
-              onClose={() => setIsOpen(false)}
-              onConfirm={handleDelete}
-              title="Delete server"
-              description="Are you sure you want to delete this server?"
-              confirmText="Delete"
-              cancelText="Cancel"
-            />
-          )}
-
-          {canEdit && (
-            <Modal isOpen={editIsOpen} setIsOpen={setEditIsOpen} closeOnBackdropClick={false}>
-              <EditServerModal data={server} onSubmit={refetch} />
-            </Modal>
-          )}
+          <ServerActionsMenu
+            server={row.original}
+            refetch={refetch}
+            editIsOpen={editIsOpen}
+            setEditIsOpen={setEditIsOpen}
+          />
         </div>
       );
     },

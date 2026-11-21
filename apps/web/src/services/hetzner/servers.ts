@@ -69,7 +69,7 @@ export async function getHetznerServersPaginated(
 
       await setRateLimit(projectId, res);
 
-      // Provisioning keeps credentials in labels; project moderators and admins may read them
+      // Provisioning keeps credentials in labels; only project admins may read them, moderators just view
       const servers = canReadCredentials(session, projectId)
         ? res.data.servers
         : res.data.servers.map(withoutCredentialLabels);
@@ -129,8 +129,10 @@ export async function getRecentlyCreatedHetznerServers(): Promise<
   ServerResponse<HetznerServerCache[]>
 > {
   return doServerActionWithAuth([], async (session) => {
-    // The cache holds SuperAdmin and file manager passwords, as do the labels moderators see
-    const projectIds = session.user.projects.map((p) => p.id);
+    // The cache holds SuperAdmin and file manager passwords, so only project admins get it
+    const projectIds = session.user.projects
+      .filter((p) => p.role === "Admin")
+      .map((p) => p.id);
 
     if (projectIds.length === 0) {
       return [];
@@ -223,12 +225,7 @@ export async function getHetznerServerMetrics(
 function canReadCredentials(session: Session, projectId: string): boolean {
   return hasPermissionSync(
     session,
-    [
-      "hetzner:servers:create",
-      "hetzner:servers:manage",
-      "hetzner:id:moderator",
-      "hetzner:id:admin",
-    ],
+    ["hetzner:servers:create", "hetzner:servers:manage", "hetzner:id:admin"],
     projectId,
   );
 }

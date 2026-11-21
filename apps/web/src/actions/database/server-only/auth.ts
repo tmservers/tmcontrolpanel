@@ -1,4 +1,8 @@
 import { getClient } from "@/lib/dbclient";
+import {
+  groupHetznerProjectsSelect,
+  hetznerAccessSelect,
+} from "@/lib/hetzner-access";
 import { getList } from "@/lib/utils";
 import { MinimalServer } from "@/types/auth";
 import { Prisma, Users } from "@tmcontrolpanel/db";
@@ -36,10 +40,12 @@ const includeGroupsWithServers = Prisma.validator<Prisma.UsersInclude>()({
               },
             },
           },
+          ...groupHetznerProjectsSelect,
         },
       },
     },
   },
+  ...hetznerAccessSelect,
   hetznerProjectUsers: {
     where: {
       project: {

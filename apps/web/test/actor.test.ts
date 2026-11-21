@@ -50,6 +50,7 @@ function dbUser(overrides: Record<string, unknown> = {}) {
     userServers: [],
     groupMembers: [],
     hetznerProjectUsers: [],
+    ownedHetznerProjects: [],
     ...overrides,
   };
 }
@@ -88,7 +89,12 @@ describe("actorForLogin", () => {
         groupMembers: [
           {
             role: "Admin",
-            group: { id: "g1", name: "G1", groupServers: [{ server }] },
+            group: {
+              id: "g1",
+              name: "G1",
+              groupHetznerProjects: [],
+              groupServers: [{ server }],
+            },
           },
         ],
       }),
@@ -106,14 +112,29 @@ describe("actorForLogin", () => {
         groupMembers: [
           {
             role: "Admin",
-            group: { id: "g1", name: "G1", groupServers: [{ server }] },
+            group: {
+              id: "g1",
+              name: "G1",
+              groupHetznerProjects: [],
+              groupServers: [{ server }],
+            },
           },
         ],
       }),
     );
     mocks.findGroups.mockResolvedValue([
-      { id: "g1", name: "G1", groupServers: [{ server }] },
-      { id: "public", name: "Public", groupServers: [{ server: other }] },
+      {
+        id: "g1",
+        name: "G1",
+        groupHetznerProjects: [],
+        groupServers: [{ server }],
+      },
+      {
+        id: "public",
+        name: "Public",
+        groupHetznerProjects: [],
+        groupServers: [{ server: other }],
+      },
     ]);
 
     const actor = await actorForLogin("login-1");

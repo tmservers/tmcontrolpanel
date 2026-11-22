@@ -306,7 +306,16 @@ export class SandboxedPlugin implements PluginInstance {
   }
 
   private handleFailure(error: unknown, where: string): void {
-    if (error instanceof SandboxFault) {
+    // The VM survives an interrupt, so a slow entry only warns; the CPU budget stops runaway plugins
+    if (error instanceof SandboxFault && error.kind === "timeout") {
+      const reason = `${error.message} (${where})`;
+      this.ctx.log.warn({ reason }, "Sandboxed plugin entry timed out");
+      void this.ctx
+        .warn(reason)
+        .catch((err) =>
+          this.ctx.log.error({ err }, "Failed to warn about a plugin"),
+        );
+    } else if (error instanceof SandboxFault) {
       this.fault(`${error.message} (${where})`);
     } else {
       this.ctx.log.error(

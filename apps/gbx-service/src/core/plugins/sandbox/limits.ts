@@ -28,7 +28,7 @@ export const DEFAULT_SANDBOX_LIMITS: SandboxLimits = {
   memoryBytes: 32 * 1024 * 1024,
   stackBytes: 1024 * 1024,
   loadMs: 2000,
-  entryMs: 100,
+  entryMs: 500,
   cpuPerMinuteMs: 6000,
   hookTimeoutMs: 10_000,
   maxPendingCalls: 100,

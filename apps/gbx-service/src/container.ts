@@ -122,7 +122,7 @@ export async function createContainer(
   const packages = new PackageLoader(new PrismaPluginPackageRepository(db), {
     assets: await loadSandboxAssets(config.templatesDir),
     storage: new PrismaPluginStorageRepository(db),
-    http: new HttpsPluginClient(),
+    http: new HttpsPluginClient(config.NADEO_CONTACT),
     clock: systemClock,
   });
 

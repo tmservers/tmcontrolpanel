@@ -1,19 +1,24 @@
 const SCRIPT_CALLBACK = "ManiaPlanet.ModeScriptCallbackArray";
 
+// Line breaks and the indentation after them, as in the server's pretty-printed script JSON
+const LINE_BREAKS = /[\r\n][\t ]*/g;
+
 // Script callbacks carry one JSON text; anything else goes through JSON.stringify
 function scriptJson(data: unknown): string | null {
   if (!Array.isArray(data) || typeof data[0] !== "string") return null;
   const args = data[1];
   if (!Array.isArray(args) || args.length !== 1) return null;
-  const text: unknown = args[0];
+  let text: unknown = args[0];
   if (typeof text !== "string" || text.length < 2) return null;
-  const first = text.charCodeAt(0);
-  const last = text.charCodeAt(text.length - 1);
+  // Valid JSON has raw line breaks only between tokens, so dropping them keeps it intact
+  if (text.includes("\n") || text.includes("\r"))
+    text = (text as string).replace(LINE_BREAKS, "");
+  const json = text as string;
+  const first = json.charCodeAt(0);
+  const last = json.charCodeAt(json.length - 1);
   const enclosed =
     (first === 123 && last === 125) || (first === 91 && last === 93);
-  // A raw line break would split the record
-  if (!enclosed || text.includes("\n") || text.includes("\r")) return null;
-  return text;
+  return enclosed ? json : null;
 }
 
 // One NDJSON record. Script JSON is copied as it is, so most events skip JSON work entirely.

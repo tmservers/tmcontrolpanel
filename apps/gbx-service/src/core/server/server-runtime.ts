@@ -193,6 +193,7 @@ export class ServerRuntime {
       matches: deps.matches,
       records: deps.records,
       users: deps.users,
+      syncMap: () => this.liveSync.syncMap(),
       log,
     });
     this.liveSync = new LiveSync({
@@ -204,7 +205,15 @@ export class ServerRuntime {
       recorder,
       log,
     });
-    this.commands = new ServerCommands({ gbx, state, bus, chat, mapList, log });
+    this.commands = new ServerCommands({
+      gbx,
+      state,
+      bus,
+      chat,
+      mapList,
+      recorder,
+      log,
+    });
 
     const systemCommands = new SystemCommands({
       serverId,

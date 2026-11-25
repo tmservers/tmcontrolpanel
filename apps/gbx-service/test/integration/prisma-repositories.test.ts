@@ -206,6 +206,47 @@ describe.skipIf(!url)("Prisma repositories", () => {
     ]);
   });
 
+  it("keeps detached finishes when the round is replayed", async () => {
+    await createServer("s1");
+    const map = await createMap("uid-1");
+    const players = new PrismaPlayerRepository(db);
+    for (const login of ["a", "b"]) await players.ensureExists(login, login);
+    const match = await new PrismaMatchRepository(db).create({
+      serverId: "s1",
+      mapId: map.id,
+      mode: "rounds",
+    });
+    const records = new PrismaRecordRepository(db);
+    const save = (login: string, time: number) =>
+      records.save({
+        serverId: "s1",
+        matchId: match.id,
+        round: 1,
+        mapId: map.id,
+        mapUid: map.uid,
+        login,
+        time,
+        checkpoints: [],
+      });
+
+    await save("a", 5000);
+    await save("b", 6000);
+    await records.detachFinishes(match.id, 1, "a");
+    await save("a", 4000);
+    await records.detachFinishes(match.id, 1);
+    await save("a", 3000);
+    await save("b", -1);
+
+    const rows = await db.records.findMany({ orderBy: { time: "asc" } });
+    expect(rows.map((r) => [r.time, r.matchId])).toEqual([
+      [-1, match.id],
+      [3000, match.id],
+      [4000, null],
+      [5000, null],
+      [6000, null],
+    ]);
+  });
+
   it("finds local records across servers sharing records", async () => {
     await createServer("s1");
     await createServer("s2");

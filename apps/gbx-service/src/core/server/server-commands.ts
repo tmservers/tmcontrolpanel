@@ -1,4 +1,9 @@
-import type { ChatConfig, ChatConfigResult, MapsChangeResult, PointsBody } from "@tmcontrolpanel/shared";
+import type {
+  ChatConfig,
+  ChatConfigResult,
+  MapsChangeResult,
+  PointsBody,
+} from "@tmcontrolpanel/shared";
 import { stripTmTags } from "tmtags";
 import type { ChatService } from "../chat/chat-service";
 import { AppError, errorMessage } from "../errors";
@@ -7,6 +12,7 @@ import type { GbxConnection } from "../gbx/connection";
 import type { LiveState } from "../live/live-state";
 import type { Logger } from "../logger";
 import type { MapList } from "./map-list";
+import type { MatchRecorder } from "./match-recorder";
 import type { ServerEventMap } from "./server-events";
 
 export interface ServerCommandsDeps {
@@ -15,13 +21,17 @@ export interface ServerCommandsDeps {
   bus: TypedEventBus<ServerEventMap>;
   chat: ChatService;
   mapList: MapList;
+  recorder: MatchRecorder;
   log: Logger;
 }
 
 type PointsType = PointsBody["type"];
 
 // Positional (round, map, match) arguments of Trackmania.Set*Points; "" leaves a value unchanged
-function pointsArgs(type: PointsType, points: number): [string, string, string] {
+function pointsArgs(
+  type: PointsType,
+  points: number,
+): [string, string, string] {
   const value = points.toString();
   return [
     type === "round" ? value : "",
@@ -52,7 +62,9 @@ export class ServerCommands {
     await this.deps.chat.announce("matchSettingsLoadedMessage", { filename });
   }
 
-  async setScriptSettings(settings: Record<string, string | number | boolean>): Promise<void> {
+  async setScriptSettings(
+    settings: Record<string, string | number | boolean>,
+  ): Promise<void> {
     await this.deps.gbx.call("SetModeScriptSettings", settings);
     // The echo comes back as a callback, which refreshes live state for every listener
     this.deps.gbx.send("Echo", "", "UpdatedSettings");
@@ -61,13 +73,34 @@ export class ServerCommands {
 
   async setPaused(paused: boolean): Promise<void> {
     const { gbx, state } = this.deps;
-    await gbx.call("TriggerModeScriptEventArray", "Maniaplanet.Pause.SetActive", [
-      paused ? "true" : "false",
-    ]);
+    await gbx.call(
+      "TriggerModeScriptEventArray",
+      "Maniaplanet.Pause.SetActive",
+      [paused ? "true" : "false"],
+    );
 
-    if (paused) {
-      state.liveInfo.isPaused = true;
-      if (state.roundNumber !== null) state.roundNumber--;
+    if (!paused) {
+      state.pauseAfterRound = false;
+      // The pause had not started yet, so the next round is a real one
+      if (state.roundPhase === "ended") state.liveInfo.isPaused = false;
+      return;
+    }
+
+    // A scored round still counts, so its EndRound must not look paused
+    if (state.roundPhase === "scored") {
+      state.pauseAfterRound = true;
+      return;
+    }
+
+    state.liveInfo.isPaused = true;
+    // Only a running round is cancelled and replayed
+    if (state.roundPhase === "running" && state.roundNumber !== null) {
+      this.deps.recorder
+        .releaseRound()
+        .catch((error) =>
+          this.deps.log.error({ err: error }, "Failed to release round"),
+        );
+      state.roundNumber--;
     }
   }
 
@@ -96,7 +129,10 @@ export class ServerCommands {
       (map) => !filenames.includes(map.FileName),
     );
     if (remaining.length === 0) {
-      throw new AppError("RemoveLastMapError", "Cannot remove the last map from the server");
+      throw new AppError(
+        "RemoveLastMapError",
+        "Cannot remove the last map from the server",
+      );
     }
 
     if (filenames.length === 1) {
@@ -127,9 +163,17 @@ export class ServerCommands {
     return { count: added };
   }
 
-  async setPlayerPoints(login: string, type: PointsType, points: number): Promise<void> {
+  async setPlayerPoints(
+    login: string,
+    type: PointsType,
+    points: number,
+  ): Promise<void> {
     const { gbx, state, bus } = this.deps;
-    await gbx.callScript("Trackmania.SetPlayerPoints", login, ...pointsArgs(type, points));
+    await gbx.callScript(
+      "Trackmania.SetPlayerPoints",
+      login,
+      ...pointsArgs(type, points),
+    );
 
     // PlayerRound has no map points; only round and match points are mirrored
     const round =
@@ -142,7 +186,11 @@ export class ServerCommands {
     bus.emit("playerUpdated", round);
   }
 
-  async setTeamPoints(teamId: number, type: PointsType, points: number): Promise<void> {
+  async setTeamPoints(
+    teamId: number,
+    type: PointsType,
+    points: number,
+  ): Promise<void> {
     const { gbx, state, bus } = this.deps;
     await gbx.callScript(
       "Trackmania.SetTeamPoints",
@@ -153,7 +201,11 @@ export class ServerCommands {
     const existing = state.liveInfo.teams?.[teamId];
     if (!existing) return;
 
-    const field = { round: "roundPoints", map: "mapPoints", match: "matchPoints" } as const;
+    const field = {
+      round: "roundPoints",
+      map: "mapPoints",
+      match: "matchPoints",
+    } as const;
     const team = { ...existing, [field[type]]: points };
     state.setTeam(teamId, team);
     bus.emit("teamUpdated", team);

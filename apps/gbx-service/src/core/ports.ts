@@ -1,11 +1,11 @@
 import type {
   ChatConfig,
-  ManialinkTheme,
-  PluginManifest,
-  ThemeData,
   JukeboxEntry,
+  ManialinkTheme,
   NotificationDto,
   PlayerInfo,
+  PluginManifest,
+  ThemeData,
 } from "@tmcontrolpanel/shared";
 
 // Persistence and external-service ports used by the core. Implemented in infra/, faked in tests.
@@ -52,8 +52,16 @@ export interface ServerRepository {
   listActiveIds(): Promise<string[]>;
   findById(serverId: string): Promise<ServerRecord | null>;
   findPlugins(serverId: string): Promise<ServerPluginRecord[]>;
-  updatePluginConfig(serverId: string, pluginId: string, config: unknown): Promise<void>;
-  setPluginEnabled(serverId: string, pluginId: string, enabled: boolean): Promise<void>;
+  updatePluginConfig(
+    serverId: string,
+    pluginId: string,
+    config: unknown,
+  ): Promise<void>;
+  setPluginEnabled(
+    serverId: string,
+    pluginId: string,
+    enabled: boolean,
+  ): Promise<void>;
 }
 
 export interface PluginPackageRepository {
@@ -95,7 +103,11 @@ export interface FirstPartyInstall {
 
 // The plugins that ship with the service, stored and installed like marketplace plugins
 export interface FirstPartyRepository {
-  install(manifest: PluginManifest, sha256: string, bytes: Uint8Array): Promise<FirstPartyInstall>;
+  install(
+    manifest: PluginManifest,
+    sha256: string,
+    bytes: Uint8Array,
+  ): Promise<FirstPartyInstall>;
 }
 
 export interface PluginStorageUsage {
@@ -106,9 +118,20 @@ export interface PluginStorageUsage {
 // Key-value data of sandboxed plugins, per server
 export interface PluginStorageRepository {
   get(serverId: string, pluginId: string, key: string): Promise<unknown>;
-  set(serverId: string, pluginId: string, key: string, value: unknown, size: number): Promise<void>;
+  set(
+    serverId: string,
+    pluginId: string,
+    key: string,
+    value: unknown,
+    size: number,
+  ): Promise<void>;
   delete(serverId: string, pluginId: string, key: string): Promise<void>;
-  keys(serverId: string, pluginId: string, prefix: string, limit: number): Promise<string[]>;
+  keys(
+    serverId: string,
+    pluginId: string,
+    prefix: string,
+    limit: number,
+  ): Promise<string[]>;
   usage(serverId: string, pluginId: string): Promise<PluginStorageUsage>;
   // Size of one stored value, 0 when absent
   sizeOf(serverId: string, pluginId: string, key: string): Promise<number>;
@@ -173,11 +196,18 @@ export interface MapRepository {
   findByUid(uid: string): Promise<MapRecord | null>;
   findByFileNames(fileNames: string[]): Promise<MapRecord[]>;
   create(map: NewMap, metadata: MapMetadata | null): Promise<MapRecord>;
-  updateMetadata(mapId: string, metadata: MapMetadata | null): Promise<MapRecord>;
+  updateMetadata(
+    mapId: string,
+    metadata: MapMetadata | null,
+  ): Promise<MapRecord>;
 }
 
 export interface MatchRepository {
-  create(input: { serverId: string; mapId: string; mode: string }): Promise<{ id: string }>;
+  create(input: {
+    serverId: string;
+    mapId: string;
+    mode: string;
+  }): Promise<{ id: string }>;
 }
 
 export interface RecordInput {
@@ -201,10 +231,19 @@ export interface LocalRecord {
 export interface RecordRepository {
   // Upserts on (matchId, login, round) when both are set, inserts otherwise
   save(record: RecordInput): Promise<void>;
+  // Takes a round's finishes out of the match, so a replay cannot overwrite them
+  detachFinishes(matchId: string, round: number, login?: string): Promise<void>;
   // Best time on this server and on servers sharing records through a group
-  findLocalRecord(serverId: string, mapUid: string): Promise<LocalRecord | null>;
+  findLocalRecord(
+    serverId: string,
+    mapUid: string,
+  ): Promise<LocalRecord | null>;
   // Best time per login on servers sharing records through a group
-  findPlayerRecords(serverId: string, mapUid: string, logins: string[]): Promise<LocalRecord[]>;
+  findPlayerRecords(
+    serverId: string,
+    mapUid: string,
+    logins: string[],
+  ): Promise<LocalRecord[]>;
 }
 
 export interface UserRepository {
@@ -240,7 +279,10 @@ export interface LeaderboardEntry {
 export interface NadeoRecordsProvider {
   getWorldRecord(mapUid: string): Promise<LeaderboardEntry | null>;
   // Personal bests keyed by account id
-  getPersonalBests(mapUid: string, accountIds: string[]): Promise<Map<string, number>>;
+  getPersonalBests(
+    mapUid: string,
+    accountIds: string[],
+  ): Promise<Map<string, number>>;
   getAccountNames(accountIds: string[]): Promise<Record<string, string>>;
 }
 

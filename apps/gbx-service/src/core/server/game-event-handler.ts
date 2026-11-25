@@ -385,6 +385,12 @@ export class GameEventHandler {
     if (state.roundNumber !== null && !state.liveInfo.isWarmUp) {
       state.roundNumber++;
     }
+    state.roundPhase = "running";
+    // The status reply after EndRound normally did this already
+    if (state.pauseAfterRound) {
+      state.pauseAfterRound = false;
+      state.liveInfo.isPaused = true;
+    }
     bus.emit("startRound");
 
     const playerList = await gbx.call<SPlayerInfo[]>("GetPlayerList", 1000, 0);
@@ -407,6 +413,7 @@ export class GameEventHandler {
   private async onEndRound(scores: Scores): Promise<void> {
     const { state, bus, gbx, clock } = this.deps;
     bus.emit("endRound", scores);
+    state.roundPhase = "ended";
 
     if (scores.useteams) {
       for (const team of scores.teams) {
@@ -451,6 +458,12 @@ export class GameEventHandler {
       .catch((error) =>
         this.deps.log.error({ err: error }, "Failed to record round"),
       );
+
+    // PreEndRound is also sent for rounds cancelled by a pause
+    const { state } = this.deps;
+    if (!state.liveInfo.isPaused && !state.liveInfo.isWarmUp) {
+      state.roundPhase = "scored";
+    }
   }
 
   // Full scoreboard requested by us (responseid) after connect/BeginMatch
@@ -510,13 +523,23 @@ export class GameEventHandler {
   private onPauseStatus(status: PauseStatus): void {
     if (status.responseid !== RESPONSE_ID) return;
     const { state } = this.deps;
+    const pausedAfterRound = state.pauseAfterRound && status.active;
+    if (state.roundPhase !== "scored") state.pauseAfterRound = false;
 
     // A pause toggled mid-round restarts that round, so it is not counted twice
     if (
+      !pausedAfterRound &&
       state.liveInfo.isPaused !== status.active &&
       state.roundNumber !== null &&
       state.roundNumber > 0
     ) {
+      if (status.active) {
+        this.deps.recorder
+          .releaseRound()
+          .catch((error) =>
+            this.deps.log.error({ err: error }, "Failed to release round"),
+          );
+      }
       state.roundNumber--;
     }
 

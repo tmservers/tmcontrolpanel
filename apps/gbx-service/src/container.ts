@@ -13,6 +13,8 @@ import {
 } from "./core/server/server-runtime";
 import { controllerLabel } from "./core/version";
 import { TicketVerifier } from "./http/ws/ticket-verifier";
+import { R2ObjectStore } from "./infra/archive/r2-store";
+import { SpoolEventArchive } from "./infra/archive/spool-archive";
 import {
   PrismaFirstPartyRepository,
   PrismaMapRepository,
@@ -95,6 +97,33 @@ export function createMarketplace(
   });
 }
 
+// Recording is optional, so a spool that cannot be used must not stop the game servers
+async function createArchive(config: Config, base: Base) {
+  if (!config.EVENT_ARCHIVE_ENDPOINT) return undefined;
+  const log = base.log.child({ module: "archive" });
+  const archive = new SpoolEventArchive({
+    dir: config.EVENT_ARCHIVE_SPOOL_DIR,
+    instance: `${config.GBX_WORKER_ID ?? config.GBX_NODE_ID}-${process.pid}-${Date.now().toString(36)}`,
+    store: new R2ObjectStore({
+      endpoint: config.EVENT_ARCHIVE_ENDPOINT,
+      bucket: config.EVENT_ARCHIVE_BUCKET,
+      accessKeyId: config.EVENT_ARCHIVE_ACCESS_KEY_ID,
+      secretAccessKey: config.EVENT_ARCHIVE_SECRET_ACCESS_KEY,
+    }),
+    clock: systemClock,
+    log,
+    maxSpoolBytes: config.EVENT_ARCHIVE_SPOOL_MB * 1024 * 1024,
+    skipReplies: config.EVENT_ARCHIVE_SKIP_REPLIES,
+  });
+  try {
+    await archive.start();
+    return archive;
+  } catch (error) {
+    log.error({ err: error }, "Event archive is off: the spool is unusable");
+    return undefined;
+  }
+}
+
 // Composition root for the GBX runtimes: the only place that picks concrete implementations
 export async function createContainer(
   config: Config,
@@ -126,6 +155,8 @@ export async function createContainer(
     clock: systemClock,
   });
 
+  const archive = await createArchive(config, base);
+
   const runtimeDeps: RuntimeDependencies = {
     log,
     controller: controllerLabel(config.APP_REVISION),
@@ -153,6 +184,7 @@ export async function createContainer(
           config.PANEL_INTERNAL_TOKEN,
         )
       : undefined,
+    archive,
   };
 
   const registry = new ServerRegistry({
@@ -168,6 +200,7 @@ export async function createContainer(
     servers,
     async close() {
       await registry.shutdown();
+      await archive?.close();
       await base.close();
     },
   };

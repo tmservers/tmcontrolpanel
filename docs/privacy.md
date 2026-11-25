@@ -1,6 +1,6 @@
 # Privacy
 
-Last updated: 10/11/2026
+Last updated: 25/11/2026
 
 This notice explains how TMControlPanel handles personal information when you use TMControlPanel or play on the Trackmania servers it manages. TMControlPanel is self-hosted software; the operator of this installation determines how it is configured and how information is used.
 
@@ -31,6 +31,7 @@ The following features depend on this installation's configuration:
 - **Error monitoring:** if enabled, Sentry receives diagnostic information and, depending on configuration, performance traces, application logs, and session replays.
 - **AI assistant:** if Codriver is enabled and used, requests and relevant game or server context are sent to the configured AI services. The panel can store request text, replies, tool actions, feedback, and usage information.
 - **Integrations and plugins:** Nadeo, Trackmania Exchange, Hetzner, result-submission services, and installed plugins may process information needed to perform enabled functions. Plugin access depends on the permissions granted by administrators.
+- **Event archive:** if enabled, raw dedicated server callbacks are stored in the operator's Cloudflare R2 bucket. They can include chat, logins, account IDs, and manialink form input.
 
 ## Who can access information
 

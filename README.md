@@ -529,6 +529,7 @@ Admins of a server can install plugins from the marketplace on the **Plugins** p
 - [Plugin marketplace](docs/plugin-marketplace.md): how it works, running your own registry, withdrawing plugins, and the security model.
 - [Plugin SDK](docs/plugin-sdk.md): writing, testing and publishing a plugin.
 - [First-party plugins](docs/first-party-plugins.md): the first-party plugins published in the registry.
+- [Event archive](docs/event-archive.md): record and read raw dedicated server callbacks in Cloudflare R2.
 
 ---
 

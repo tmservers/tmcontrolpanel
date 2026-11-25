@@ -38,7 +38,7 @@ export async function getServerSettingsAs(
   const [server, settings] = await Promise.all([
     getClient().servers.findUnique({
       where: { id: serverId },
-      select: { enableHelpCommand: true },
+      select: { enableHelpCommand: true, recordEvents: true },
     }),
     client.multicall([
       ["GetServerOptions"],
@@ -94,6 +94,7 @@ export async function getServerSettingsAs(
       uploadRate: systemInfo.ConnectionUploadRate,
       profileSkins: !profileSkinsDisabled,
       enableHelpCommand: server?.enableHelpCommand ?? false,
+      recordEvents: server?.recordEvents ?? false,
     };
 
     return serverSettings;

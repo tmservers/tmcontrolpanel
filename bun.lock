@@ -22,6 +22,7 @@
         "@sentry/node": "^10",
         "@tmcontrolpanel/db": "workspace:*",
         "@tmcontrolpanel/shared": "workspace:*",
+        "aws4fetch": "^1.0.20",
         "fastify": "^5.12.5",
         "handlebars": "^4.7.10",
         "handlebars-layouts": "^3.1.4",
@@ -49,7 +50,7 @@
     },
     "apps/web": {
       "name": "@tmcontrolpanel/web",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.132.0",
         "@codemirror/lang-cpp": "^6.0.2",
@@ -1258,6 +1259,8 @@
     "available-typed-arrays": ["available-typed-arrays@1.0.7", "", { "dependencies": { "possible-typed-array-names": "^1.0.0" } }, "sha512-wvUjBtSGN7+7SjNpq/9M2Tg350UZD3q62IFZLbRAR1bSMlCo1ZaeW+BJ+D090e4hIIZLBcTDWe4Mh4jvUDajzQ=="],
 
     "avvio": ["avvio@9.3.0", "", { "dependencies": { "@fastify/error": "^4.0.0", "fastq": "^1.17.1" } }, "sha512-g2tQ7LE7oOSqDfwEm3M+ZCMTJc7KiZCdJ4UwyZJb5ckTKyYu50OYmvv0mCFXPuYXoM4zkSt8zM9XQ9KCvxA74A=="],
+
+    "aws4fetch": ["aws4fetch@1.0.20", "", {}, "sha512-/djoAN709iY65ETD6LKCtyyEI04XIBP5xVvfmNxsEP0uJB5tyaGBztSryRr4HqMStr9R06PisQE7m9zDTXKu6g=="],
 
     "axe-core": ["axe-core@4.11.1", "", {}, "sha512-BASOg+YwO2C+346x3LZOeoovTIoTrRqEsqMa6fmfAV0P+U9mFr9NsyOEpiYvFjbc64NMrSswhV50WdXzdb/Z5A=="],
 

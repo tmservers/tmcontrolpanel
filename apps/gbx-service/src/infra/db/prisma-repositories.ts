@@ -145,6 +145,7 @@ export class PrismaServerRepository implements ServerRepository {
         process.env.SECRETS_KEY ?? "",
       ),
       enableHelpCommand: server.enableHelpCommand,
+      recordEvents: server.recordEvents,
       theme: resolveTheme(server.theme, groupThemes),
       themeData: resolveServerTheme(server.theme, groupThemes),
       chat: {

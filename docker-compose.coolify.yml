@@ -85,7 +85,16 @@ services:
       - NADEO_CONTACT=${NADEO_CONTACT:-TMControlPanel}
       - NADEO_CLIENT_ID=${NADEO_CLIENT_ID:?}
       - NADEO_CLIENT_SECRET=${NADEO_CLIENT_SECRET:?}
+      - EVENT_ARCHIVE_ENDPOINT=${EVENT_ARCHIVE_ENDPOINT:-}
+      - EVENT_ARCHIVE_BUCKET=${EVENT_ARCHIVE_BUCKET:-}
+      - EVENT_ARCHIVE_ACCESS_KEY_ID=${EVENT_ARCHIVE_ACCESS_KEY_ID:-}
+      - EVENT_ARCHIVE_SECRET_ACCESS_KEY=${EVENT_ARCHIVE_SECRET_ACCESS_KEY:-}
+      - EVENT_ARCHIVE_SPOOL_DIR=${EVENT_ARCHIVE_SPOOL_DIR:-/data/events}
+      - EVENT_ARCHIVE_SPOOL_MB=${EVENT_ARCHIVE_SPOOL_MB:-1024}
+      - EVENT_ARCHIVE_SKIP_REPLIES=${EVENT_ARCHIVE_SKIP_REPLIES:-false}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - event-spool:/data/events
     networks:
       default:
         aliases:
@@ -142,6 +151,7 @@ services:
 volumes:
   db-data:
   redis-data:
+  event-spool:
 
 networks:
   npm:

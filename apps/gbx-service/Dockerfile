@@ -37,7 +37,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 RUN addgroup --system --gid 1001 nodejs \
-  && adduser --system --uid 1001 gbx
+  && adduser --system --uid 1001 gbx \
+  && mkdir -p /data/events \
+  && chown gbx:nodejs /data/events
 
 COPY --from=prod-deps /prod/node_modules ./node_modules
 # Prisma client generated for the selected database
@@ -46,6 +48,7 @@ COPY --from=builder /app/apps/gbx-service/dist ./dist
 COPY --from=builder /app/apps/gbx-service/templates ./templates
 
 USER gbx
+ENV EVENT_ARCHIVE_SPOOL_DIR=/data/events
 ENV PORT=3100
 # Commit shown in the in-game connect notice
 ARG APP_REVISION

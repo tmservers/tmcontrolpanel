@@ -14,6 +14,7 @@ import type { SandboxAssets } from "../../src/core/plugins/sandbox/sandboxed-plu
 import type { PluginDefinition } from "../../src/core/plugins/sdk";
 import type {
   ErrorReporter,
+  EventArchive,
   ServerPluginRecord,
   ServerRecord,
 } from "../../src/core/ports";
@@ -111,6 +112,7 @@ export function serverRecord(
     user: "SuperAdmin",
     password: "secret",
     enableHelpCommand: true,
+    recordEvents: false,
     theme: DEFAULT_THEME,
     chat: {
       manualRouting: false,
@@ -181,6 +183,7 @@ export interface HarnessOptions {
   codriver?: CodriverClient;
   errors?: ErrorReporter;
   controller?: string;
+  archive?: EventArchive;
 }
 
 export type Harness = Awaited<ReturnType<typeof createHarness>>;
@@ -282,6 +285,7 @@ export async function createHarness(options: HarnessOptions = {}) {
     systemCommands: options.systemCommands,
     controller: options.controller,
     codriver: options.codriver,
+    archive: options.archive,
   });
 
   if (options.connect !== false) {

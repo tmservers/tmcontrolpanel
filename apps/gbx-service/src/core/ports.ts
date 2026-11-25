@@ -19,6 +19,8 @@ export interface ServerRecord {
   password: string;
   chat: ChatConfig;
   enableHelpCommand: boolean;
+  // Store every raw callback in the event archive, when one is configured
+  recordEvents: boolean;
   // Resolved from the server, its groups and the default
   theme: ManialinkTheme;
   // The same settings as a preset; the Default preset when absent
@@ -45,6 +47,18 @@ export interface InstalledPackageRef {
   grantedCapabilities: string[];
   // Withdrawn from the marketplace; never loaded
   yanked?: boolean;
+}
+
+// Stores raw server callbacks. Both methods are synchronous, never throw and never wait on I/O.
+export interface EventArchive {
+  record(serverId: string, method: string, data: unknown): void;
+  // A line of our own, such as a connect marker, so gaps in the recording are visible
+  mark(serverId: string, name: string, payload: object): void;
+}
+
+export interface ObjectStore {
+  // Overwrites an existing object; rejects when it was not stored
+  put(key: string, body: Uint8Array): Promise<void>;
 }
 
 export interface ServerRepository {

@@ -27,10 +27,12 @@ export async function saveServerSettingsAs(
   const client = getGbxClient(serverId);
   const db = getClient();
 
-  if (serverSettings.enableHelpCommand !== undefined) {
+  const { enableHelpCommand, recordEvents } = serverSettings;
+  if (enableHelpCommand !== undefined || recordEvents !== undefined) {
+    // Prisma leaves undefined fields untouched
     await db.servers.update({
       where: { id: serverId },
-      data: { enableHelpCommand: serverSettings.enableHelpCommand },
+      data: { enableHelpCommand, recordEvents },
     });
 
     await publishServerEvent({ type: "server.updated", serverId });

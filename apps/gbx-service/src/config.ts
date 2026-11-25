@@ -2,7 +2,8 @@ import {
   DEFAULT_MARKETPLACE_INDEX_URL,
   MIN_SECRET_LENGTH,
 } from "@tmcontrolpanel/shared";
-import { hostname } from "node:os";
+import { hostname, tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
@@ -15,6 +16,13 @@ const csv = z
       .map((item) => item.trim())
       .filter(Boolean),
   );
+
+const ARCHIVE_KEYS = [
+  "EVENT_ARCHIVE_ENDPOINT",
+  "EVENT_ARCHIVE_BUCKET",
+  "EVENT_ARCHIVE_ACCESS_KEY_ID",
+  "EVENT_ARCHIVE_SECRET_ACCESS_KEY",
+] as const;
 
 const envSchema = z
   .object({
@@ -66,8 +74,35 @@ const envSchema = z
     // Codriver: where the service reaches the panel, and the token both share; empty turns /co off
     PANEL_INTERNAL_URL: z.union([z.literal(""), z.string().url()]).default(""),
     PANEL_INTERNAL_TOKEN: z.string().default(""),
+    // Event archive on R2; off unless the first four are set
+    EVENT_ARCHIVE_ENDPOINT: z
+      .union([z.literal(""), z.string().url()])
+      .default(""),
+    EVENT_ARCHIVE_BUCKET: z.string().default(""),
+    EVENT_ARCHIVE_ACCESS_KEY_ID: z.string().default(""),
+    EVENT_ARCHIVE_SECRET_ACCESS_KEY: z.string().default(""),
+    EVENT_ARCHIVE_SPOOL_DIR: z
+      .string()
+      .default("")
+      .transform((dir) => dir.trim() || join(tmpdir(), "tmcp-events")),
+    EVENT_ARCHIVE_SPOOL_MB: z.coerce.number().int().positive().default(1024),
+    EVENT_ARCHIVE_SKIP_REPLIES: z
+      .enum(["", "true", "false"])
+      .default("")
+      .transform((value) => value === "true"),
   })
   .superRefine((env, ctx) => {
+    const archive = ARCHIVE_KEYS.filter((key) => env[key]);
+    if (archive.length > 0) {
+      for (const key of ARCHIVE_KEYS) {
+        if (env[key]) continue;
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [key],
+          message: `${key} must be set when ${archive[0]} is set`,
+        });
+      }
+    }
     if (
       env.PANEL_INTERNAL_URL &&
       env.PANEL_INTERNAL_TOKEN.length < MIN_SECRET_LENGTH

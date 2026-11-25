@@ -233,6 +233,13 @@ export default function SettingsForm({ serverId }: { serverId: string }) {
             description="Enable the help command for plugins."
             type="checkbox"
           />
+
+          <FormElement
+            name={"recordEvents"}
+            label="Record Events"
+            description="Store every event the server sends, including chat. Needs an event archive set up by the operator."
+            type="checkbox"
+          />
         </div>
 
         <Button

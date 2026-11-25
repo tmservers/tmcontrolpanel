@@ -26,7 +26,7 @@ The service buffers events in memory and appends them to a local spool file per 
 
 Object keys are `<serverId>/<YYYY>/<MM>/<DD>/<HHmmss>-<startMs>-<instance>-<seq>.ndjson.zst`. The date and time are UTC and say when the file was started, up to two seconds after its first event.
 
-Each line is a JSON array: `[receivedAtMs, name, payload]`. The time is when the controller received the callback. Mode script callbacks use the script event name, such as `Trackmania.Event.WayPoint`, and the script's JSON payload. Other callbacks use the XML-RPC method name and an array of arguments. Service lines are `TMControlPanel.Connected`, `TMControlPanel.Disconnected`, and `TMControlPanel.Dropped` with `{"count":n}`. Events while the controller is disconnected are not recorded. Replies to the controller's own method calls are not recorded; only callbacks are stored. A crash or full disk can leave a broken line, so readers should skip lines that do not parse.
+Each line is a JSON array: `[receivedAtMs, name, payload]`. The time is when the controller received the callback. Mode script callbacks use the script event name, such as `Trackmania.Event.WayPoint`, and the script's JSON payload with its line breaks and indentation removed. Other callbacks use the XML-RPC method name and an array of arguments. Service lines are `TMControlPanel.Connected`, `TMControlPanel.Disconnected`, and `TMControlPanel.Dropped` with `{"count":n}`. Events while the controller is disconnected are not recorded. Replies to the controller's own method calls are not recorded; only callbacks are stored. A crash or full disk can leave a broken line, so readers should skip lines that do not parse.
 
 ## Read events
 

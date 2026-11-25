@@ -15,8 +15,24 @@ describe("event lines", () => {
     ]);
   });
 
+  it("flattens the server's pretty-printed script JSON onto one line", () => {
+    const payload =
+      '{\n\t"count": 1,\r\n\t"map": {\n\t\t"name": "Training - 18"\n\t}\n}';
+    const line = encodeEvent(5, callback, [
+      "Maniaplanet.StartMap_Start",
+      [payload],
+    ]);
+    expect(line).toBe(
+      '[5,"Maniaplanet.StartMap_Start",{"count": 1,"map": {"name": "Training - 18"}}]\n',
+    );
+    expect(JSON.parse(line)[2]).toEqual(JSON.parse(payload));
+    expect(
+      isScriptReply(callback, ["Reply", ['{\n\t"responseid": "tmcp"\n}']]),
+    ).toBe(true);
+  });
+
   it.each([
-    ["newline", ["Event", ['{"value":\n1}']]],
+    ["newline inside a string", ["Event", ['{"value":"a\nb"}']]],
     ["plain text", ["Event", ["hello"]]],
     ["empty string", ["Event", [""]]],
     ["several args", ["Event", ['{"a":1}', "extra"]]],

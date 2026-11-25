@@ -117,6 +117,7 @@ function sameTarget(a: ConnectionTarget, b: ConnectionTarget): boolean {
 const NOTICE_PREFIX = "$<$0c6TMControlPanel$>: ";
 // A goodbye message must not hold up a handover
 const NOTICE_TIMEOUT_MS = 1000;
+const PLUGIN_WARNING_INTERVAL_MS = 10 * 60_000;
 
 // Everything TMControlPanel runs for one dedicated server
 export class ServerRuntime {
@@ -136,6 +137,10 @@ export class ServerRuntime {
   private readonly supervisor: ConnectionSupervisor;
   private session: GbxSession | null = null;
   private connected = false;
+  private readonly pluginWarnings = new Map<
+    string,
+    { at: number; suppressed: number }
+  >();
   private connectedAt: number | null = null;
   private name: string | null = null;
   // Details of the last connection attempt, whether or not it succeeded
@@ -279,6 +284,8 @@ export class ServerRuntime {
             errors: deps.errors ?? noopErrorReporter,
             disablePlugin: (pluginId, name, reason) =>
               this.disablePlugin(pluginId, name, reason),
+            warnPlugin: (pluginId, name, reason) =>
+              this.warnPlugin(pluginId, name, reason),
           },
           definition,
           record,
@@ -477,6 +484,41 @@ export class ServerRuntime {
       );
     }
     await this.refreshPlugins();
+  }
+
+  // A plugin hit a soft limit: tell the admins, at most once per plugin every 10 minutes
+  async warnPlugin(
+    pluginId: string,
+    name: string,
+    reason: string,
+  ): Promise<void> {
+    const now = this.deps.clock.now();
+    const last = this.pluginWarnings.get(pluginId);
+    if (last && now - last.at < PLUGIN_WARNING_INTERVAL_MS) {
+      last.suppressed += 1;
+      return;
+    }
+    const suppressed = last?.suppressed ?? 0;
+    this.pluginWarnings.set(pluginId, { at: now, suppressed: 0 });
+    try {
+      const notifications = await this.deps.notifications.createForServerAdmins(
+        {
+          serverId: this.serverId,
+          type: "pluginWarning",
+          message: `Plugin ${name} is running slowly on ${this.name ?? "the server"}`,
+          description:
+            suppressed > 0
+              ? `${reason}. ${suppressed} more since the last warning.`
+              : reason,
+        },
+      );
+      this.events.emit("adminCommand", notifications);
+    } catch (error) {
+      this.log.error(
+        { err: error, pluginId: name },
+        "Failed to warn admins about a plugin",
+      );
+    }
   }
 
   // server_plugins changed in the database

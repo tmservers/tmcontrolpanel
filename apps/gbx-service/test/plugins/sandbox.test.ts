@@ -278,7 +278,7 @@ describe("sandboxed plugins", () => {
     expect(h.runtime.state.theme.quad.background).toBe("0A0");
   });
 
-  it("turns off a plugin that hangs and tells the admins", async () => {
+  it("warns when a plugin command hangs and keeps the plugin enabled", async () => {
     const h = await createHarness({
       packages: [
         {
@@ -295,16 +295,88 @@ describe("sandboxed plugins", () => {
     await h.chat("p1", "/spin");
     await new Promise((resolve) => setTimeout(resolve, 20));
 
-    expect(record(h, "test-plugin").enabled).toBe(false);
-    expect(h.runtime.plugins.loadedIds()).not.toContain("test-plugin");
+    expect(record(h, "test-plugin").enabled).toBe(true);
+    expect(h.runtime.plugins.loadedIds()).toContain("test-plugin");
     expect(h.notifications.created.map((n) => [n.type, n.description])).toEqual(
       [
         [
-          "pluginDisabled",
+          "pluginWarning",
           "The plugin ran longer than its time limit (command /spin)",
         ],
       ],
     );
+  });
+
+  it("throttles repeated slow plugin warnings for ten minutes", async () => {
+    const h = await createHarness({
+      packages: [
+        {
+          bytes: testPackage(
+            `ctx.command("spin", () => { for (;;) {} }); return {};`,
+            { commands: ["spin"] },
+          ),
+        },
+      ],
+      players: [player("p1")],
+      sandboxLimits: {
+        ...DEFAULT_SANDBOX_LIMITS,
+        entryMs: 20,
+        cpuPerMinuteMs: 60_000,
+      },
+    });
+
+    await h.chat("p1", "/spin");
+    await h.chat("p1", "/spin");
+    await h.chat("p1", "/spin");
+    expect(h.notifications.created).toHaveLength(1);
+
+    await h.clock.advance(10 * 60 * 1000 + 1);
+    await h.chat("p1", "/spin");
+
+    expect(h.notifications.created.map((n) => [n.type, n.description])).toEqual(
+      [
+        [
+          "pluginWarning",
+          "The plugin ran longer than its time limit (command /spin)",
+        ],
+        [
+          "pluginWarning",
+          "The plugin ran longer than its time limit (command /spin). 2 more since the last warning.",
+        ],
+      ],
+    );
+  });
+
+  it("disables a plugin that exceeds its CPU budget", async () => {
+    const h = await createHarness({
+      packages: [
+        {
+          bytes: testPackage(
+            `ctx.command("spin", () => { for (;;) {} }); return {};`,
+            { commands: ["spin"] },
+          ),
+        },
+      ],
+      players: [player("p1")],
+      sandboxLimits: {
+        ...DEFAULT_SANDBOX_LIMITS,
+        entryMs: 20,
+        cpuPerMinuteMs: 50,
+      },
+    });
+
+    await h.chat("p1", "/spin");
+    await h.chat("p1", "/spin");
+    await h.chat("p1", "/spin");
+
+    expect(record(h, "test-plugin").enabled).toBe(false);
+    expect(
+      h.notifications.created.some(
+        (n) =>
+          n.type === "pluginDisabled" &&
+          n.description?.toLowerCase().includes("cpu"),
+      ),
+    ).toBe(true);
   });
 
   it("turns off a plugin that hangs while loading or runs out of memory", async () => {

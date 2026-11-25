@@ -531,7 +531,7 @@ Every plugin runs in its own QuickJS interpreter inside a WebAssembly instance, 
 | ------------------------------------------------- | ---------------------------- | ------------------- |
 | Memory                                            | 32 MB                        | turned off          |
 | Loading (evaluating the bundle and `create`)      | 2 s                          | turned off          |
-| One callback, timer or promise continuation       | 100 ms                       | turned off          |
+| One callback, timer or promise continuation       | 500 ms                       | interrupted, warned |
 | CPU per minute, all callbacks together            | 6 s                          | turned off          |
 | `start()` and `stop()` finishing their async work | 10 s                         | load fails / logged |
 | Uncaught errors                                   | 100 per minute               | turned off          |
@@ -544,7 +544,7 @@ Every plugin runs in its own QuickJS interpreter inside a WebAssembly instance, 
 | Admin notifications                               | 1 per minute, bursts of 3    | `RateLimitError`    |
 | Timers / handlers / widgets / calls in flight     | 100 / 1000 / 200 / 100       | `LimitError`        |
 
-A plugin that is turned off stays off on that server until an admin turns it back on. The admins get a notification saying why.
+A plugin that is turned off stays off on that server until an admin turns it back on. The admins get a notification saying why. A callback that runs too long is stopped where it is, but the plugin keeps running; the admins get a warning notification, at most one per plugin every 10 minutes. A plugin that keeps doing it runs into the CPU budget and is turned off.
 
 ## Testing your plugin
 

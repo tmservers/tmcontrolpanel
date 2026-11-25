@@ -34,6 +34,10 @@ export class LiveState {
   currentMatchId: string | null = null;
   // null in time attack; 0 at map start otherwise
   roundNumber: number | null = null;
+  // scored: results are in, EndRound is still to come
+  roundPhase: "running" | "scored" | "ended" = "running";
+  // A pause requested after scoring, applied once the round has ended
+  pauseAfterRound = false;
   modeChanged = false;
 
   reset(): void {
@@ -43,6 +47,8 @@ export class LiveState {
     this.activeMapRecord = null;
     this.currentMatchId = null;
     this.roundNumber = null;
+    this.roundPhase = "running";
+    this.pauseAfterRound = false;
     this.modeChanged = false;
   }
 

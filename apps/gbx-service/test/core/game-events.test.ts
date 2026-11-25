@@ -162,14 +162,70 @@ describe("race events", () => {
     });
   });
 
-  it("does not record during warm-up or pause", async () => {
+  it("records warm-up and pause finishes outside the match", async () => {
     const h = await createHarness();
     await h.script("Trackmania.WarmUp.Start");
     await h.script("Trackmania.Event.WayPoint", waypoint("p1", 1000, true));
     await h.script("Trackmania.WarmUp.End");
     h.runtime.state.liveInfo.isPaused = true;
+    await h.script("Trackmania.Event.WayPoint", waypoint("p1", 2000, true));
+    await h.script("Trackmania.Event.WayPoint", waypoint("p1", 3000, true));
+    expect(
+      h.records.saved.map((r) => [r.time, r.matchId, r.round, r.mapUid]),
+    ).toEqual([
+      [1000, null, null, "map-a-uid"],
+      [2000, null, null, "map-a-uid"],
+      [3000, null, null, "map-a-uid"],
+    ]);
+  });
+
+  it("records a finish when no match or map is known yet", async () => {
+    const h = await createHarness();
+    h.runtime.state.currentMatchId = null;
+    h.runtime.state.activeMapRecord = null;
     await h.script("Trackmania.Event.WayPoint", waypoint("p1", 1000, true));
-    expect(h.records.saved).toEqual([]);
+    expect(h.records.saved).toEqual([
+      expect.objectContaining({
+        time: 1000,
+        matchId: null,
+        mapUid: "map-a-uid",
+      }),
+    ]);
+  });
+
+  it("keeps the finishes of a round that is cancelled by a pause", async () => {
+    const h = await createHarness();
+    await h.script("Maniaplanet.StartRound_Start");
+    await h.script("Trackmania.Event.WayPoint", waypoint("p1", 1000, true));
+    await h.runtime.commands.setPaused(true);
+    await flush();
+    expect(h.records.saved).toEqual([
+      expect.objectContaining({ time: 1000, matchId: null }),
+    ]);
+  });
+
+  it("keeps the finishes of a round paused outside the panel", async () => {
+    const h = await createHarness();
+    await h.script("Maniaplanet.StartRound_Start");
+    await h.script("Trackmania.Event.WayPoint", waypoint("p1", 1000, true));
+    await h.script("Maniaplanet.Pause.Status", {
+      responseid: "tmcp",
+      available: true,
+      active: true,
+    });
+    expect(h.records.saved[0].matchId).toBeNull();
+  });
+
+  it("keeps an earlier finish of the same player in one round", async () => {
+    const h = await createHarness();
+    await h.script("Maniaplanet.StartRound_Start");
+    for (const time of [1000, 2000]) {
+      await h.script("Trackmania.Event.WayPoint", waypoint("p1", time, true));
+    }
+    expect(h.records.saved.map((r) => [r.time, r.matchId])).toEqual([
+      [1000, null],
+      [2000, "match-1"],
+    ]);
   });
 
   it("creates the user and retries when a record references an unknown login", async () => {
@@ -325,6 +381,110 @@ describe("rounds and scores", () => {
       active: false,
     });
     expect(h.runtime.state.liveInfo.isPaused).toBe(true);
+  });
+
+  describe("pausing around the round end", () => {
+    const pauseStatus = (active: boolean) => ({
+      responseid: "tmcp",
+      available: true,
+      active,
+    });
+
+    it("keeps a scored round counted and unpaused until EndRound", async () => {
+      const h = await createHarness();
+      const seen: unknown[] = [];
+      h.runtime.events.on("scores", ({ section }) =>
+        seen.push([
+          section,
+          h.runtime.state.liveInfo.isPaused,
+          h.runtime.state.roundNumber,
+        ]),
+      );
+
+      await h.script("Maniaplanet.StartRound_Start");
+      await h.script("Trackmania.Scores", scores("PreEndRound", []));
+      await h.runtime.commands.setPaused(true);
+      await h.script("Trackmania.Scores", scores("EndRound", []));
+      expect(seen).toEqual([
+        ["PreEndRound", false, 1],
+        ["EndRound", false, 1],
+      ]);
+
+      await h.script("Maniaplanet.Pause.Status", pauseStatus(true));
+      expect(h.runtime.state.liveInfo.isPaused).toBe(true);
+      expect(h.runtime.state.roundNumber).toBe(1);
+
+      // The pause runs as a round of its own, which is not counted
+      await h.script("Maniaplanet.StartRound_Start");
+      await h.script("Trackmania.Scores", scores("PreEndRound", []));
+      await h.script("Trackmania.Scores", scores("EndRound", []));
+      await h.script("Maniaplanet.Pause.Status", pauseStatus(false));
+      await h.script("Maniaplanet.StartRound_Start");
+      expect(h.runtime.state.liveInfo.isPaused).toBe(false);
+      expect(h.runtime.state.roundNumber).toBe(2);
+    });
+
+    it("applies the pause on the next round without a status reply", async () => {
+      const h = await createHarness();
+      await h.script("Maniaplanet.StartRound_Start");
+      await h.script("Trackmania.Scores", scores("PreEndRound", []));
+      await h.runtime.commands.setPaused(true);
+      await h.script("Trackmania.Scores", scores("EndRound", []));
+      await h.script("Maniaplanet.StartRound_Start");
+      expect(h.runtime.state.liveInfo.isPaused).toBe(true);
+    });
+
+    it("drops the pause when it is undone before EndRound", async () => {
+      const h = await createHarness();
+      await h.script("Maniaplanet.StartRound_Start");
+      await h.script("Trackmania.Scores", scores("PreEndRound", []));
+      await h.runtime.commands.setPaused(true);
+      await h.runtime.commands.setPaused(false);
+      await h.script("Trackmania.Scores", scores("EndRound", []));
+      await h.script("Maniaplanet.Pause.Status", pauseStatus(false));
+      await h.script("Maniaplanet.StartRound_Start");
+      expect(h.runtime.state.liveInfo.isPaused).toBe(false);
+      expect(h.runtime.state.roundNumber).toBe(2);
+    });
+
+    it("keeps the round counted when paused after EndRound", async () => {
+      const h = await createHarness();
+      await h.script("Maniaplanet.StartRound_Start");
+      await h.script("Trackmania.Scores", scores("PreEndRound", []));
+      await h.script("Trackmania.Scores", scores("EndRound", []));
+      await h.runtime.commands.setPaused(true);
+      expect(h.runtime.state.liveInfo.isPaused).toBe(true);
+      expect(h.runtime.state.roundNumber).toBe(1);
+    });
+
+    it("records the next round when a pause is undone before it starts", async () => {
+      const h = await createHarness();
+      await h.script("Maniaplanet.StartRound_Start");
+      await h.script("Trackmania.Scores", scores("PreEndRound", []));
+      await h.script("Trackmania.Scores", scores("EndRound", []));
+      await h.runtime.commands.setPaused(true);
+      await h.runtime.commands.setPaused(false);
+      await h.script("Maniaplanet.StartRound_Start");
+      expect(h.runtime.state.liveInfo.isPaused).toBe(false);
+      expect(h.runtime.state.roundNumber).toBe(2);
+    });
+
+    it("still replays a round paused while it runs", async () => {
+      const h = await createHarness();
+      await h.script("Maniaplanet.StartRound_Start");
+      await h.runtime.commands.setPaused(true);
+      expect(h.runtime.state.liveInfo.isPaused).toBe(true);
+      expect(h.runtime.state.roundNumber).toBe(0);
+
+      await h.script("Trackmania.Scores", scores("PreEndRound", []));
+      await h.script("Trackmania.Scores", scores("EndRound", []));
+      await h.script("Maniaplanet.Pause.Status", pauseStatus(true));
+      await h.script("Maniaplanet.StartRound_Start");
+      await h.script("Trackmania.Scores", scores("EndRound", []));
+      await h.script("Maniaplanet.Pause.Status", pauseStatus(false));
+      await h.script("Maniaplanet.StartRound_Start");
+      expect(h.runtime.state.roundNumber).toBe(1);
+    });
   });
 
   it("marks eliminated players by account id", async () => {

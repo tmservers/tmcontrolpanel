@@ -48,6 +48,7 @@ type BridgeArg = string | number | boolean;
 
 export class QuickJsVm {
   private deadline = Number.POSITIVE_INFINITY;
+  private entries = 0;
   private disposed = false;
   private bridge: QuickJSHandle | null = null;
 
@@ -69,6 +70,11 @@ export class QuickJsVm {
     runtime.setInterruptHandler(() => options.now() > instance.deadline);
     instance.installHostFunctions();
     return instance;
+  }
+
+  // Goes up with every entry; host state can't change while one entry runs
+  get entry(): number {
+    return this.entries;
   }
 
   get isDisposed(): boolean {
@@ -177,6 +183,7 @@ export class QuickJsVm {
     if (this.disposed) throw new SandboxFault("crash", "The sandbox was disposed");
     const started = this.options.now();
     this.deadline = started + budgetMs;
+    this.entries++;
     try {
       return fn();
     } catch (error) {

@@ -46,6 +46,20 @@ export function guestRuntime(global: any): void {
     throw toError(result.error);
   };
 
+  // Live fields are copied in once per entry; the host answers repeat reads with a marker
+  const liveCache: Record<string, unknown> = {};
+  const live = (field: string): any => {
+    const value = call("live", field, field in liveCache);
+    if (
+      value !== null &&
+      typeof value === "object" &&
+      value.__tmcpUnchanged === true
+    )
+      return liveCache[field];
+    liveCache[field] = value;
+    return value;
+  };
+
   let nextCallId = 1;
   const pending = new Map<
     number,
@@ -328,19 +342,19 @@ export function guestRuntime(global: any): void {
 
     live: Object.freeze({
       get liveInfo() {
-        return call("live", "liveInfo");
+        return live("liveInfo");
       },
       get activePlayers() {
-        return call("live", "activePlayers");
+        return live("activePlayers");
       },
       get activeMapUid() {
-        return call("live", "activeMapUid");
+        return live("activeMapUid");
       },
       get roundNumber() {
-        return call("live", "roundNumber");
+        return live("roundNumber");
       },
       get isReverseCup() {
-        return call("live", "isReverseCup");
+        return live("isReverseCup");
       },
       findActivePlayer: (login: string) => call("live.findPlayer", login),
       reverseCupGetPlayerStatus: (login: string) =>

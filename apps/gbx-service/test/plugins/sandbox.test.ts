@@ -88,6 +88,34 @@ describe("sandboxed plugins", () => {
     expect(stored(h, "args")).toEqual(["alpha", "beta", ""]);
   });
 
+  it("copies live state into the sandbox once per entry", async () => {
+    const h = await createHarness({
+      packages: [
+        {
+          bytes: testPackage(`
+            ctx.on("playerConnect", (p) => {
+              const first = ctx.live.activePlayers;
+              const again = ctx.live.activePlayers;
+              ctx.storage.set("seen-" + p.login, { same: first === again, count: again.length });
+            });`),
+        },
+      ],
+      players: [player("p1")],
+    });
+
+    h.world.players.push(player("p2"));
+    await h.callback("ManiaPlanet.PlayerConnect", ["p2", false]);
+    h.world.players.push(player("p3"));
+    await h.callback("ManiaPlanet.PlayerConnect", ["p3", false]);
+
+    // Within one entry the copy is reused; the next entry sees the new player
+    const p2 = stored(h, "seen-p2") as { same: boolean; count: number };
+    const p3 = stored(h, "seen-p3") as { same: boolean; count: number };
+    expect(p2.same).toBe(true);
+    expect(p3.same).toBe(true);
+    expect(p3.count).toBe(p2.count + 1);
+  });
+
   it("runs the example plugin end to end", async () => {
     const h = await createHarness({
       packages: [{ bytes: hello }],

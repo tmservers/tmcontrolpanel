@@ -79,6 +79,8 @@ const LIVE_FIELDS = [
   "roundNumber",
   "isReverseCup",
 ] as const;
+// Tells the guest to reuse the copy it got earlier in the same entry
+const LIVE_UNCHANGED = { __tmcpUnchanged: true };
 const PAGE_ID = /^[A-Za-z0-9_-]{1,64}$/;
 const ACTION_NAME = /^[A-Za-z0-9_\-.{}]{1,100}$/;
 const STORAGE_KEY = /^[\x21-\x7e]+$/;
@@ -142,6 +144,8 @@ export function sandboxedDefinition(
 // One sandboxed plugin on one server: a QuickJS instance plus the host side of every call
 export class SandboxedPlugin implements PluginInstance {
   private vm: QuickJsVm | null = null;
+  // Entry in which each live field was last sent, so repeat reads skip serializing all players
+  private readonly liveSent = new Map<string, number>();
   private faulted = false;
   private overCpu = false;
   private readonly limits: SandboxLimits;
@@ -671,10 +675,15 @@ export class SandboxedPlugin implements PluginInstance {
       this.timers.delete(Number(id));
     },
 
-    live: (field: unknown) => {
+    live: (field: unknown, cached: unknown) => {
       if (!LIVE_FIELDS.includes(field as never))
         throw invalid(`Unknown live field "${String(field)}"`);
-      return this.ctx.live[field as (typeof LIVE_FIELDS)[number]];
+      const key = field as (typeof LIVE_FIELDS)[number];
+      const entry = this.vm?.entry ?? -1;
+      if (cached === true && this.liveSent.get(key) === entry)
+        return LIVE_UNCHANGED;
+      this.liveSent.set(key, entry);
+      return this.ctx.live[key];
     },
 
     "live.findPlayer": (login: unknown) =>

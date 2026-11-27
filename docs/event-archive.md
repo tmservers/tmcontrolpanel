@@ -16,7 +16,7 @@ The GBX service can store raw callbacks from opted-in dedicated servers in Cloud
 
    `EVENT_ARCHIVE_SPOOL_DIR` defaults to `/data/events`. `EVENT_ARCHIVE_SPOOL_MB` defaults to `1024`; when the spool is larger, new events are dropped and counted. `EVENT_ARCHIVE_SKIP_REPLIES` defaults to `false`; set it to `true` to skip script callbacks with a non-empty `responseid`, such as plugins polling `Trackmania.GetScores`.
 
-3. Mount a persistent, writable volume at `/data/events`. The container uses uid 1001. Without persistent storage, events not yet uploaded are lost when the container is recreated.
+3. Mount a persistent, writable volume at `/data/events`. The container uses uid 1001. Without persistent storage, events not yet uploaded are lost when the container is recreated. The compose files in this repository (`docker-compose.yml`, `docker-compose.node.yml`, the Coolify files and the controller stacks in `docker/`) already mount an `event-spool` volume there and list the `EVENT_ARCHIVE_*` variables.
 4. Enable **Record Events** on each server that should be recorded. The setting defaults off.
 5. Add an R2 lifecycle rule to remove objects after your chosen retention period. Ninety days is a suggested starting point.
 

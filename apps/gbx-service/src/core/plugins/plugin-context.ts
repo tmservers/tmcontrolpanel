@@ -60,6 +60,7 @@ export interface PluginServices {
   manialinks: ManialinkService;
   errors: ErrorReporter;
   disablePlugin(pluginId: string, name: string, reason: string): Promise<void>;
+  warnPlugin(pluginId: string, name: string, reason: string): Promise<void>;
 }
 
 function parseConfig(
@@ -218,6 +219,8 @@ export function createPluginContext(
     },
     disable: (reason) =>
       services.disablePlugin(record.pluginId, definition.id, reason),
+    warn: (reason) =>
+      services.warnPlugin(record.pluginId, definition.id, reason),
     captureException(error, extra, tags) {
       services.errors.captureException(error, {
         tags: { ...tags, plugin: definition.id, serverId: services.serverId },

@@ -51,6 +51,7 @@ export async function createServer(
     | "scriptSettingsSavedMessage"
     | "mapListChangeMessage"
     | "enableHelpCommand"
+    | "recordEvents"
     | "createdAt"
     | "updatedAt"
     | "deletedAt"

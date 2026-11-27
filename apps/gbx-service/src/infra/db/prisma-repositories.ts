@@ -145,6 +145,7 @@ export class PrismaServerRepository implements ServerRepository {
         process.env.SECRETS_KEY ?? "",
       ),
       enableHelpCommand: server.enableHelpCommand,
+      recordEvents: server.recordEvents,
       theme: resolveTheme(server.theme, groupThemes),
       themeData: resolveServerTheme(server.theme, groupThemes),
       chat: {
@@ -475,6 +476,17 @@ export class PrismaRecordRepository implements RecordRepository {
         matchId: record.matchId,
         serverId: record.serverId,
       },
+    });
+  }
+
+  async detachFinishes(
+    matchId: string,
+    round: number,
+    login?: string,
+  ): Promise<void> {
+    await this.db.records.updateMany({
+      where: { matchId, round, login, time: { gt: 0 } },
+      data: { matchId: null },
     });
   }
 

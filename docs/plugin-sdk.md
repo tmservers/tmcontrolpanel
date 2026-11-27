@@ -135,7 +135,7 @@ Callbacks may be `async`. A callback that throws or rejects is logged with the p
 | `command(name, handler)`                                                                                                                                                                                                         |                 | A chat command from the manifest. The handler gets `(args, login)`.                                   |
 | `action(name, handler)`                                                                                                                                                                                                          |                 | A manialink button. See [Widgets](#widgets-and-windows).                                              |
 | `setTimeout(fn, ms)`, `setInterval(fn, ms)`, `sleep(ms)`                                                                                                                                                                         |                 | Timers that are cleared on unload. Both return a cancel function. Intervals run at most every 100 ms. |
-| `live.liveInfo`, `live.activePlayers`, `live.activeMapUid`, `live.roundNumber`, `live.isReverseCup`, `live.findActivePlayer(login)`, `live.reverseCupGetPlayerStatus(login)`, `live.reverseCupGetPointsRepartition(playerCount)` |                 | Read-only live state of the server.                                                                   |
+| `live.liveInfo`, `live.activePlayers`, `live.activeMapUid`, `live.roundNumber`, `live.isReverseCup`, `live.findActivePlayer(login)`, `live.reverseCupGetPlayerStatus(login)`, `live.reverseCupGetPointsRepartition(playerCount)` |                 | Read-only live state of the server. Reads in one handler share one copy; don't modify it.             |
 | `players.get(login)`                                                                                                                                                                                                             |                 | A player, from the live state or the server.                                                          |
 | `players.isAdmin(login)`                                                                                                                                                                                                         |                 | Whether the login holds a panel admin role on this server (SDK 5).                                    |
 | `ui.widget(options)`, `ui.window(options)`, `ui.addButton(button)`, `ui.removeButton(name)`                                                                                                                                      | `ui`            | Widgets, windows and the shared button bar.                                                           |
@@ -531,7 +531,7 @@ Every plugin runs in its own QuickJS interpreter inside a WebAssembly instance, 
 | ------------------------------------------------- | ---------------------------- | ------------------- |
 | Memory                                            | 32 MB                        | turned off          |
 | Loading (evaluating the bundle and `create`)      | 2 s                          | turned off          |
-| One callback, timer or promise continuation       | 100 ms                       | turned off          |
+| One callback, timer or promise continuation       | 500 ms                       | interrupted, warned |
 | CPU per minute, all callbacks together            | 6 s                          | turned off          |
 | `start()` and `stop()` finishing their async work | 10 s                         | load fails / logged |
 | Uncaught errors                                   | 100 per minute               | turned off          |
@@ -544,7 +544,7 @@ Every plugin runs in its own QuickJS interpreter inside a WebAssembly instance, 
 | Admin notifications                               | 1 per minute, bursts of 3    | `RateLimitError`    |
 | Timers / handlers / widgets / calls in flight     | 100 / 1000 / 200 / 100       | `LimitError`        |
 
-A plugin that is turned off stays off on that server until an admin turns it back on. The admins get a notification saying why.
+A plugin that is turned off stays off on that server until an admin turns it back on. The admins get a notification saying why. A callback that runs too long is stopped where it is, but the plugin keeps running; the admins get a warning notification, at most one per plugin every 10 minutes. A plugin that keeps doing it runs into the CPU budget and is turned off.
 
 ## Testing your plugin
 

@@ -71,6 +71,7 @@ Copy the existing values. Do not generate fresh secrets for the extra node.
 - `SECRETS_KEY`, `GBX_SERVICE_TOKEN`, `WS_TICKET_SECRET`, `PANEL_INTERNAL_TOKEN` and `NEXTAUTH_SECRET`: identical across nodes. This app uses `NEXTAUTH_SECRET` as its auth secret. The service tokens and `SECRETS_KEY` must be at least 32 characters.
 - `HETZNER_KEY` and, during a key rotation, `HETZNER_KEY_PREVIOUS`: preserve the existing encryption keys for stored Hetzner credentials.
 - `NADEO_CLIENT_ID`, `NADEO_CLIENT_SECRET`, `NADEO_SERVER_LOGIN`, `NADEO_SERVER_PASSWORD` and `NADEO_CONTACT`: copy the existing Nadeo settings.
+- `EVENT_ARCHIVE_ENDPOINT`, `EVENT_ARCHIVE_BUCKET`, `EVENT_ARCHIVE_ACCESS_KEY_ID` and `EVENT_ARCHIVE_SECRET_ACCESS_KEY` (optional): copy them when the primary records events, so servers keep being recorded after the backup takes them over. Both nodes write to the same bucket. The node file mounts its own `event-spool` volume at `/data/events`. See [Event archive](event-archive.md).
 
 URL-encode passwords in connection URLs. Keep the environment file private (`chmod 600`). Copy optional fallback API keys and default permissions if used.
 

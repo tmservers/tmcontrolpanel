@@ -44,6 +44,7 @@ export const ServerSettingsSchema = z.object({
   profileSkins: z.boolean(),
 
   enableHelpCommand: z.boolean().optional(),
+  recordEvents: z.boolean().optional(),
 });
 
 export type ServerSettingsSchemaType = z.infer<typeof ServerSettingsSchema>;

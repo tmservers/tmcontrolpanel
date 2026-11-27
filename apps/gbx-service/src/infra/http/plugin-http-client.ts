@@ -24,8 +24,15 @@ const RESERVED_HEADERS = new Set([
   "proxy-authorization",
 ]);
 
+const DEFAULT_USER_AGENT = "TMControlPanel-Plugin";
+
+// eCircuitMania: the only plugin host that gets the operator's contact info
+const CONTACT_HOSTS = new Set([
+  "us-central1-fantasy-trackmania.cloudfunctions.net",
+]);
+
 export class HttpsPluginClient implements PluginHttpClient {
-  constructor(private readonly userAgent = "TMControlPanel-Plugin") {}
+  constructor(private readonly contact = "") {}
 
   fetch(input: PluginHttpRequest): Promise<PluginHttpResponse> {
     let url: URL;
@@ -34,6 +41,8 @@ export class HttpsPluginClient implements PluginHttpClient {
     } catch (error) {
       return Promise.reject(error);
     }
+    const userAgent =
+      (CONTACT_HOSTS.has(url.hostname) && this.contact) || DEFAULT_USER_AGENT;
     const headers = Object.fromEntries(
       Object.entries(input.headers).filter(
         ([name]) => !RESERVED_HEADERS.has(name.toLowerCase()),
@@ -45,7 +54,7 @@ export class HttpsPluginClient implements PluginHttpClient {
         url,
         {
           method: input.method,
-          headers: { "user-agent": this.userAgent, ...headers },
+          headers: { "user-agent": userAgent, ...headers },
           lookup: publicLookup as never,
           timeout: input.timeoutMs,
         },

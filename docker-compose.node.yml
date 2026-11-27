@@ -70,6 +70,15 @@ services:
       GBX_WORKERS: ${GBX_WORKERS:-1}
       GBX_LEASE_TTL_MS: ${GBX_LEASE_TTL_MS:-15000}
       PANEL_INTERNAL_URL: http://tmcontrolpanel:3000
+      EVENT_ARCHIVE_ENDPOINT: ${EVENT_ARCHIVE_ENDPOINT:-}
+      EVENT_ARCHIVE_BUCKET: ${EVENT_ARCHIVE_BUCKET:-}
+      EVENT_ARCHIVE_ACCESS_KEY_ID: ${EVENT_ARCHIVE_ACCESS_KEY_ID:-}
+      EVENT_ARCHIVE_SECRET_ACCESS_KEY: ${EVENT_ARCHIVE_SECRET_ACCESS_KEY:-}
+      EVENT_ARCHIVE_SPOOL_DIR: ${EVENT_ARCHIVE_SPOOL_DIR:-/data/events}
+      EVENT_ARCHIVE_SPOOL_MB: ${EVENT_ARCHIVE_SPOOL_MB:-1024}
+      EVENT_ARCHIVE_SKIP_REPLIES: ${EVENT_ARCHIVE_SKIP_REPLIES:-false}
+    volumes:
+      - event-spool:/data/events
     healthcheck:
       test:
         [
@@ -82,3 +91,6 @@ services:
       timeout: 5s
       retries: 12
       start_period: 60s
+
+volumes:
+  event-spool:

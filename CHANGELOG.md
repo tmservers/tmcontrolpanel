@@ -2,6 +2,25 @@
 
 Release notes of TMControlPanel, newest first. The entries are the descriptions of the [GitHub releases](https://github.com/tmservers/tmcontrolpanel/releases).
 
+## [1.2.0] - 2026-11-28
+
+### New Features
+
+- **Event archive.** The GBX service can store every raw callback of a server as compressed NDJSON in an S3-compatible bucket such as Cloudflare R2, without database or Redis writes. Turn it on with `EVENT_ARCHIVE_ENDPOINT`, `EVENT_ARCHIVE_BUCKET`, `EVENT_ARCHIVE_ACCESS_KEY_ID` and `EVENT_ARCHIVE_SECRET_ACCESS_KEY`, mount a persistent volume at `/data/events`, and enable **Record Events** in each server's settings. See `docs/event-archive.md`.
+
+### Changes
+
+- A plugin callback over the time limit no longer turns the plugin off. The callback is still interrupted, and the server's admins get a warning notification, at most once per plugin every 10 minutes. The limit per callback goes from 100 ms to 500 ms. Crashes, memory, the CPU budget and rate limit abuse still turn a plugin off.
+- Personal best lookups for the same map are merged into one Nadeo request, simultaneous world record lookups share one, and map ids are cached for 24 hours, so joins and map changes no longer queue up behind the shared rate limit.
+- Plugins that read live data (`ctx.live.liveInfo`, `activePlayers`) several times in one callback get it copied into the sandbox once per callback instead of on every read. Every installed plugin version gets this speedup, for example Live Round on a 27-player lobby uses about seven times less sandbox CPU.
+- Requests to eCircuitMania, from the panel and the eCircuitMania plugin, send `NADEO_CONTACT` as the user agent. Other plugin hosts still get the generic one.
+
+### Bug Fixes
+
+- Pausing between the end of a round and its score table no longer makes plugins skip that round or lets the next round overwrite its records. The pause takes effect once the round is scored.
+- The event archive stores mode script callbacks that the dedicated server sends as indented JSON under their script event name, instead of as escaped strings under `ManiaPlanet.ModeScriptCallbackArray`.
+- Finishes during warm-up and pauses are stored without a match, and finishes of cancelled or repeated runs are detached instead of overwritten.
+
 ## [1.1.0] - 2026-11-20
 
 ### Breaking changes
@@ -582,7 +601,10 @@ The first-party plugins in the marketplace are rewritten as TSX components on SD
 
 - Updated setup documentation using the new Docker image
 
-[Unreleased]: https://github.com/tmservers/tmcontrolpanel/compare/v0.12.0-beta...HEAD
+[Unreleased]: https://github.com/tmservers/tmcontrolpanel/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/tmservers/tmcontrolpanel/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/tmservers/tmcontrolpanel/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/tmservers/tmcontrolpanel/compare/v0.12.0-beta...v1.0.0
 [0.12.0-beta]: https://github.com/tmservers/tmcontrolpanel/compare/v0.11.3-beta...v0.12.0-beta
 [0.11.3-beta]: https://github.com/tmservers/tmcontrolpanel/compare/v0.11.2-beta...v0.11.3-beta
 [0.11.2-beta]: https://github.com/tmservers/tmcontrolpanel/compare/v0.11.1-beta...v0.11.2-beta

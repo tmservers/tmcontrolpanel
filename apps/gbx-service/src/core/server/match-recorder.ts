@@ -3,6 +3,7 @@ import type { GbxConnection } from "../gbx/connection";
 import type { LiveState } from "../live/live-state";
 import type { Logger } from "../logger";
 import type {
+  MapRecord,
   MatchRepository,
   RecordInput,
   RecordRepository,
@@ -17,11 +18,16 @@ export interface MatchRecorderDeps {
   matches: MatchRepository;
   records: RecordRepository;
   users: UserRepository;
+  syncMap(): Promise<void>;
   log: Logger;
 }
 
 // Persists matches, finishes and round results for the current map
 export class MatchRecorder {
+  private writes: Promise<void> = Promise.resolve();
+  private finishedRound = "";
+  private readonly finished = new Set<string>();
+
   constructor(private readonly deps: MatchRecorderDeps) {}
 
   async startMatch(mode: string): Promise<void> {
@@ -43,55 +49,140 @@ export class MatchRecorder {
     state.currentMatchId = match.id;
   }
 
+  // Every finish is stored; warm-up and pause finishes just belong to no match
   async recordFinish(waypoint: Waypoint): Promise<void> {
-    const round = this.claimRound();
-    if (round === false) return;
+    const { state } = this.deps;
+    const live = this.isLive();
+    const matchId = live ? state.currentMatchId : null;
+    const round = live ? this.claimRound() : null;
+    const repeated = this.markFinished(matchId, round, waypoint.login);
+    const known = this.knownMap();
 
-    await this.save({
-      ...this.base(waypoint.login, round),
-      time: waypoint.racetime,
-      checkpoints: waypoint.curracecheckpoints || [],
+    await this.enqueue(async () => {
+      const map = known ?? (await this.resolveMap());
+      if (!map) {
+        this.deps.log.error({ waypoint }, "No active map, finish not saved");
+        return;
+      }
+      if (repeated && matchId !== null && round !== null) {
+        await this.detach(matchId, round, waypoint.login);
+      }
+      await this.save({
+        ...this.base(map, matchId, round),
+        login: waypoint.login,
+        time: waypoint.racetime,
+        checkpoints: waypoint.curracecheckpoints || [],
+      });
     });
   }
 
   async recordRound(scores: Scores): Promise<void> {
+    if (!this.isLive()) return;
+    const matchId = this.deps.state.currentMatchId;
     const round = this.claimRound();
-    if (round === false) return;
+    const known = this.knownMap();
 
-    for (const player of scores.players) {
-      await this.save({
-        ...this.base(player.login, round),
-        time: player.prevracetime,
-        checkpoints: player.prevracecheckpoints || [],
-        points: player.roundpoints,
-      });
-    }
+    await this.enqueue(async () => {
+      const map = known ?? (await this.resolveMap());
+      if (!map) {
+        this.deps.log.error("No active map, round not saved");
+        return;
+      }
+      for (const player of scores.players) {
+        await this.save({
+          ...this.base(map, matchId, round),
+          login: player.login,
+          time: player.prevracetime,
+          checkpoints: player.prevracecheckpoints || [],
+          points: player.roundpoints,
+        });
+      }
+    });
   }
 
-  // Returns the round to store, or false when nothing should be recorded (warm-up/pause)
-  private claimRound(): number | null | false {
-    const { state } = this.deps;
-    if (state.liveInfo.isWarmUp || state.liveInfo.isPaused) return false;
-    if (!state.activeMapRecord) {
-      this.deps.log.error("No active map, record not saved");
-      return false;
-    }
+  // Keeps the finishes of the current round, which is about to be replayed
+  async releaseRound(): Promise<void> {
+    const { currentMatchId, roundNumber } = this.deps.state;
+    this.finished.clear();
+    if (currentMatchId === null || !roundNumber) return;
+    await this.enqueue(() => this.detach(currentMatchId, roundNumber));
+  }
 
-    // A finish before the first StartRound belongs to round 1
+  private isLive(): boolean {
+    const { isWarmUp, isPaused } = this.deps.state.liveInfo;
+    return !isWarmUp && !isPaused;
+  }
+
+  // A finish before the first StartRound belongs to round 1
+  private claimRound(): number | null {
+    const { state } = this.deps;
     if (state.roundNumber === 0) state.roundNumber = 1;
     return state.roundNumber;
   }
 
-  private base(login: string, round: number | null) {
-    const map = this.deps.state.activeMapRecord!;
+  // Whether this player already finished in this round
+  private markFinished(
+    matchId: string | null,
+    round: number | null,
+    login: string,
+  ): boolean {
+    if (matchId === null || round === null) return false;
+    const key = `${matchId}:${round}`;
+    if (this.finishedRound !== key) {
+      this.finishedRound = key;
+      this.finished.clear();
+    }
+    const repeated = this.finished.has(login);
+    this.finished.add(login);
+    return repeated;
+  }
+
+  // Writes run in event order, so a detach never overtakes the finish it is for
+  private enqueue(task: () => Promise<void>): Promise<void> {
+    const run = this.writes.then(task);
+    this.writes = run.catch(() => {});
+    return run;
+  }
+
+  // null while the map on the server has no synced row yet
+  private knownMap(): MapRecord | null {
+    const { activeMapRecord, liveInfo } = this.deps.state;
+    if (!activeMapRecord) return null;
+    const current = liveInfo.currentMap;
+    return !current || current === activeMapRecord.uid ? activeMapRecord : null;
+  }
+
+  private async resolveMap(): Promise<MapRecord | null> {
+    const known = this.knownMap();
+    if (known) return known;
+    try {
+      await this.deps.syncMap();
+      return this.deps.state.activeMapRecord;
+    } catch (error) {
+      this.deps.log.error({ err: error }, "Failed to sync the active map");
+      return null;
+    }
+  }
+
+  private base(map: MapRecord, matchId: string | null, round: number | null) {
     return {
       serverId: this.deps.serverId,
-      matchId: this.deps.state.currentMatchId,
+      matchId,
       round,
       mapId: map.id,
       mapUid: map.uid,
-      login,
     };
+  }
+
+  private async detach(matchId: string, round: number, login?: string) {
+    try {
+      await this.deps.records.detachFinishes(matchId, round, login);
+    } catch (error) {
+      this.deps.log.error(
+        { err: error, matchId, round, login },
+        "Failed to detach finishes",
+      );
+    }
   }
 
   // A record can fail when the login has no users row yet; create it and retry once
@@ -101,7 +192,10 @@ export class MatchRecorder {
       await records.save(record);
       return;
     } catch (error) {
-      log.warn({ err: error, login: record.login }, "Saving record failed, syncing player");
+      log.warn(
+        { err: error, login: record.login },
+        "Saving record failed, syncing player",
+      );
     }
 
     try {

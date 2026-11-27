@@ -5,5 +5,6 @@ export const axiosECM = axios.create({
   baseURL: config.ECM.URL,
   headers: {
     "Content-Type": "application/json",
+    "User-Agent": config.NADEO.CONTACT || "TMControlPanel",
   },
 });

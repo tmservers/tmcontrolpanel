@@ -107,6 +107,8 @@ export interface PluginContext<Config = unknown> {
   ): Promise<NotificationDto[]>;
   // Turns the plugin off for this server and tells its admins why
   disable(reason: string): Promise<void>;
+  // Tells the server's admins about a problem without turning the plugin off
+  warn(reason: string): Promise<void>;
   server: {
     // Raw script change without the configured chat announcement
     setScriptName(script: string): Promise<void>;

@@ -90,7 +90,17 @@ services:
       NADEO_CONTACT: TMControlPanel / <your contact info>
       NADEO_CLIENT_ID: 
       NADEO_CLIENT_SECRET: 
+      # Optional event archive; set all four credentials to enable
+      # EVENT_ARCHIVE_ENDPOINT:
+      # EVENT_ARCHIVE_BUCKET:
+      # EVENT_ARCHIVE_ACCESS_KEY_ID:
+      # EVENT_ARCHIVE_SECRET_ACCESS_KEY:
+      # EVENT_ARCHIVE_SPOOL_DIR: /data/events
+      # EVENT_ARCHIVE_SPOOL_MB: 1024
+      # EVENT_ARCHIVE_SKIP_REPLIES: false
       LOG_LEVEL: info
+    volumes:
+      - event-spool:/data/events # Spool for the optional event archive
     depends_on:
       - db
       - redis
@@ -113,3 +123,4 @@ volumes:
   db-data:
   redis-data:
   evosc-data:
+  event-spool:

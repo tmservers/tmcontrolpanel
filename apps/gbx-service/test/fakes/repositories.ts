@@ -1,4 +1,8 @@
-import type { JukeboxEntry, NotificationDto, PlayerInfo } from "@tmcontrolpanel/shared";
+import type {
+  JukeboxEntry,
+  NotificationDto,
+  PlayerInfo,
+} from "@tmcontrolpanel/shared";
 import type {
   JukeboxStore,
   LeaderboardEntry,
@@ -28,7 +32,11 @@ import type {
 
 export class InMemoryServerRepository implements ServerRepository {
   readonly servers = new Map<string, ServerRecord>();
-  readonly configUpdates: { serverId: string; pluginId: string; config: unknown }[] = [];
+  readonly configUpdates: {
+    serverId: string;
+    pluginId: string;
+    config: unknown;
+  }[] = [];
 
   add(server: ServerRecord): this {
     this.servers.set(server.id, server);
@@ -48,14 +56,22 @@ export class InMemoryServerRepository implements ServerRepository {
     return structuredClone(this.servers.get(serverId)?.plugins ?? []);
   }
 
-  async updatePluginConfig(serverId: string, pluginId: string, config: unknown) {
+  async updatePluginConfig(
+    serverId: string,
+    pluginId: string,
+    config: unknown,
+  ) {
     this.configUpdates.push({ serverId, pluginId, config });
-    const plugin = this.servers.get(serverId)?.plugins.find((p) => p.pluginId === pluginId);
+    const plugin = this.servers
+      .get(serverId)
+      ?.plugins.find((p) => p.pluginId === pluginId);
     if (plugin) plugin.config = config;
   }
 
   async setPluginEnabled(serverId: string, pluginId: string, enabled: boolean) {
-    const plugin = this.servers.get(serverId)?.plugins.find((p) => p.pluginId === pluginId);
+    const plugin = this.servers
+      .get(serverId)
+      ?.plugins.find((p) => p.pluginId === pluginId);
     if (plugin) plugin.enabled = enabled;
   }
 }
@@ -78,18 +94,34 @@ export class InMemoryPluginStorage implements PluginStorageRepository {
   }
 
   async get(serverId: string, pluginId: string, key: string) {
-    return structuredClone(this.values.get(this.key(serverId, pluginId, key))?.value ?? null);
+    return structuredClone(
+      this.values.get(this.key(serverId, pluginId, key))?.value ?? null,
+    );
   }
 
-  async set(serverId: string, pluginId: string, key: string, value: unknown, size: number) {
-    this.values.set(this.key(serverId, pluginId, key), { value: structuredClone(value), size });
+  async set(
+    serverId: string,
+    pluginId: string,
+    key: string,
+    value: unknown,
+    size: number,
+  ) {
+    this.values.set(this.key(serverId, pluginId, key), {
+      value: structuredClone(value),
+      size,
+    });
   }
 
   async delete(serverId: string, pluginId: string, key: string) {
     this.values.delete(this.key(serverId, pluginId, key));
   }
 
-  async keys(serverId: string, pluginId: string, prefix: string, limit: number) {
+  async keys(
+    serverId: string,
+    pluginId: string,
+    prefix: string,
+    limit: number,
+  ) {
     const start = this.key(serverId, pluginId, prefix);
     return [...this.values.keys()]
       .filter((k) => k.startsWith(start))
@@ -99,8 +131,13 @@ export class InMemoryPluginStorage implements PluginStorageRepository {
   }
 
   async usage(serverId: string, pluginId: string): Promise<PluginStorageUsage> {
-    const own = [...this.values.entries()].filter(([k]) => k.startsWith(`${serverId}/${pluginId}/`));
-    return { keys: own.length, bytes: own.reduce((sum, [, v]) => sum + v.size, 0) };
+    const own = [...this.values.entries()].filter(([k]) =>
+      k.startsWith(`${serverId}/${pluginId}/`),
+    );
+    return {
+      keys: own.length,
+      bytes: own.reduce((sum, [, v]) => sum + v.size, 0),
+    };
   }
 
   async sizeOf(serverId: string, pluginId: string, key: string) {
@@ -118,7 +155,9 @@ export class FakeHttpClient implements PluginHttpClient {
   }
 }
 
-export class InMemoryPlayerRepository implements PlayerRepository, UserRepository {
+export class InMemoryPlayerRepository
+  implements PlayerRepository, UserRepository
+{
   readonly users = new Map<string, string>();
   failNextUpsert = false;
 
@@ -148,7 +187,9 @@ export class InMemoryMapRepository implements MapRepository {
   }
 
   async findByFileNames(fileNames: string[]) {
-    return [...this.maps.values()].filter((map) => fileNames.includes(map.fileName));
+    return [...this.maps.values()].filter((map) =>
+      fileNames.includes(map.fileName),
+    );
   }
 
   async create(map: NewMap, metadata: MapMetadata | null) {
@@ -175,7 +216,12 @@ export class InMemoryMapRepository implements MapRepository {
 }
 
 export class InMemoryMatchRepository implements MatchRepository {
-  readonly matches: { id: string; serverId: string; mapId: string; mode: string }[] = [];
+  readonly matches: {
+    id: string;
+    serverId: string;
+    mapId: string;
+    mode: string;
+  }[] = [];
 
   async create(input: { serverId: string; mapId: string; mode: string }) {
     const match = { id: `match-${this.matches.length + 1}`, ...input };
@@ -198,12 +244,31 @@ export class InMemoryRecordRepository implements RecordRepository {
     this.saved.push(record);
   }
 
+  async detachFinishes(matchId: string, round: number, login?: string) {
+    for (const record of this.saved) {
+      if (
+        record.matchId === matchId &&
+        record.round === round &&
+        record.time > 0 &&
+        (login === undefined || record.login === login)
+      ) {
+        record.matchId = null;
+      }
+    }
+  }
+
   async findLocalRecord() {
     return this.localRecord;
   }
 
-  async findPlayerRecords(_serverId: string, _mapUid: string, logins: string[]) {
-    return this.playerRecords.filter((r) => r.login && logins.includes(r.login));
+  async findPlayerRecords(
+    _serverId: string,
+    _mapUid: string,
+    logins: string[],
+  ) {
+    return this.playerRecords.filter(
+      (r) => r.login && logins.includes(r.login),
+    );
   }
 }
 
@@ -257,7 +322,11 @@ export class FakeNadeo implements MapMetadataProvider, NadeoRecordsProvider {
 
   async getMapsMetadata(uids: string[]) {
     if (this.fail) throw new Error("nadeo down");
-    return new Map(uids.filter((uid) => this.metadata.has(uid)).map((uid) => [uid, this.metadata.get(uid)!]));
+    return new Map(
+      uids
+        .filter((uid) => this.metadata.has(uid))
+        .map((uid) => [uid, this.metadata.get(uid)!]),
+    );
   }
 
   async getWorldRecord(mapUid: string) {
@@ -268,11 +337,17 @@ export class FakeNadeo implements MapMetadataProvider, NadeoRecordsProvider {
   async getPersonalBests(_mapUid: string, accountIds: string[]) {
     if (this.fail) throw new Error("nadeo down");
     return new Map(
-      accountIds.filter((id) => this.personalBests.has(id)).map((id) => [id, this.personalBests.get(id)!]),
+      accountIds
+        .filter((id) => this.personalBests.has(id))
+        .map((id) => [id, this.personalBests.get(id)!]),
     );
   }
 
   async getAccountNames(accountIds: string[]) {
-    return Object.fromEntries(accountIds.filter((id) => this.names[id]).map((id) => [id, this.names[id]]));
+    return Object.fromEntries(
+      accountIds
+        .filter((id) => this.names[id])
+        .map((id) => [id, this.names[id]]),
+    );
   }
 }

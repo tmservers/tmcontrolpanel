@@ -227,6 +227,8 @@ Make sure to update or add the environment variables for the services in your `d
   - `PANEL_INTERNAL_URL`, `PANEL_INTERNAL_TOKEN` (optional): The panel address the service uses for Codriver `/co` commands (`http://tmcontrolpanel:3000`), and the same token as the `tmcontrolpanel` container. Empty turns `/co` off.
   - `LOG_LEVEL`, `SENTRY_DSN`, `SENTRY_ENVIRONMENT` (optional): Logging and error reporting of the service.
   - `MARKETPLACE_INDEX_URL`, `MARKETPLACE_CHECK_MINUTES` (optional): The plugin marketplace the service checks for withdrawn plugin versions, and how often (default every 30 minutes). Empty URL turns the check off.
+  - `EVENT_ARCHIVE_ENDPOINT`, `EVENT_ARCHIVE_BUCKET`, `EVENT_ARCHIVE_ACCESS_KEY_ID`, `EVENT_ARCHIVE_SECRET_ACCESS_KEY` (optional): S3-compatible bucket (such as Cloudflare R2) that stores raw callbacks of servers with **Record Events** on. Set all four to turn the archive on, or none to keep it off; setting only some stops the service at startup. See [Event archive](docs/event-archive.md).
+  - `EVENT_ARCHIVE_SPOOL_DIR` (default `/data/events`), `EVENT_ARCHIVE_SPOOL_MB` (default `1024`), `EVENT_ARCHIVE_SKIP_REPLIES` (default `false`): Local spool for events not uploaded yet, its size limit, and whether to skip script callbacks that answer a `responseid`. The compose files mount the `event-spool` volume at `/data/events`, so pending events survive a container recreate.
 
 - **Dedicated Server Environment Variables**:
   - `TM_MASTERSERVER_LOGIN`: Login for the dedicated server (same as `NADEO_SERVER_LOGIN` in TMControlPanel).
@@ -306,7 +308,14 @@ gbx-service:
     NADEO_CONTACT: TMControlPanel / <your contact info>
     NADEO_CLIENT_ID:
     NADEO_CLIENT_SECRET:
+    # Optional event archive; set all four credentials to enable (see docs/event-archive.md)
+    # EVENT_ARCHIVE_ENDPOINT:
+    # EVENT_ARCHIVE_BUCKET:
+    # EVENT_ARCHIVE_ACCESS_KEY_ID:
+    # EVENT_ARCHIVE_SECRET_ACCESS_KEY:
     LOG_LEVEL: info
+  volumes:
+    - eventSpool:/data/events # Spool for the optional event archive
   depends_on:
     - db
     - redis
@@ -326,12 +335,13 @@ redis:
     - redisData:/data
 ```
 
-Also add the redis volume to the list of volumes at the bottom of your `docker-compose.yml` file:
+Also add the redis and event spool volumes to the list of volumes at the bottom of your `docker-compose.yml` file:
 
 ```yaml
 volumes:
   ...
   redisData: null
+  eventSpool: null
 ```
 
 > **Note:** Make sure you are using the correct volume names for the filemanger service. For **PyPlanet**, the volume name is usually `tmserverData`, and for **EvoSC**, it is `serverData`.
@@ -396,7 +406,7 @@ Make sure to update or add the environment variables for the added services in y
     - `SENTRY_NORMALIZE_DEPTH` (optional): Maximum object serialization depth. Defaults to `3`.
     - `SENTRY_IGNORE_ERRORS` (optional): Comma-separated list of error messages that should not be reported.
 
-- **GBX Service Environment Variables** (`gbx-service`): use the same `DATABASE_URL`, `REDIS_URI`, `GBX_SERVICE_TOKEN`, `WS_TICKET_SECRET` and Nadeo values as the `tmcontrolpanel` service, and set `WS_ALLOWED_ORIGINS` to the origin of the panel. See [Architecture](#architecture) for what each variable does.
+- **GBX Service Environment Variables** (`gbx-service`): use the same `DATABASE_URL`, `REDIS_URI`, `GBX_SERVICE_TOKEN`, `WS_TICKET_SECRET` and Nadeo values as the `tmcontrolpanel` service, and set `WS_ALLOWED_ORIGINS` to the origin of the panel. See [Architecture](#architecture) for what each variable does. The optional `EVENT_ARCHIVE_*` variables are described under the [new stack setup](#2-modify-the-configuration).
 
 > **Note:** Make sure you are using the correct service name for the dedicated server. For **PyPlanet**, the service name is usually `dedicated`, and for **EvoSC**, it is `trackmania`.
 
@@ -529,6 +539,7 @@ Admins of a server can install plugins from the marketplace on the **Plugins** p
 - [Plugin marketplace](docs/plugin-marketplace.md): how it works, running your own registry, withdrawing plugins, and the security model.
 - [Plugin SDK](docs/plugin-sdk.md): writing, testing and publishing a plugin.
 - [First-party plugins](docs/first-party-plugins.md): the first-party plugins published in the registry.
+- [Event archive](docs/event-archive.md): record and read raw dedicated server callbacks in Cloudflare R2.
 
 ---
 

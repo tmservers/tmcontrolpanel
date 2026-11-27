@@ -42,6 +42,7 @@ import {
   noopErrorReporter,
   type Clock,
   type ErrorReporter,
+  type EventArchive,
   type JukeboxStore,
   type MapMetadataProvider,
   type MapRepository,
@@ -96,6 +97,8 @@ export interface RuntimeDependencies {
   systemCommands?: SystemCommandServices;
   // Forwards /co to the panel; without it /co says Codriver is not set up
   codriver?: CodriverClient;
+  // Keeps the raw callbacks of servers that have recording on
+  archive?: EventArchive;
 }
 
 const API_VERSION = "2023-04-24";
@@ -117,6 +120,7 @@ function sameTarget(a: ConnectionTarget, b: ConnectionTarget): boolean {
 const NOTICE_PREFIX = "$<$0c6TMControlPanel$>: ";
 // A goodbye message must not hold up a handover
 const NOTICE_TIMEOUT_MS = 1000;
+const PLUGIN_WARNING_INTERVAL_MS = 10 * 60_000;
 
 // Everything TMControlPanel runs for one dedicated server
 export class ServerRuntime {
@@ -136,7 +140,12 @@ export class ServerRuntime {
   private readonly supervisor: ConnectionSupervisor;
   private session: GbxSession | null = null;
   private connected = false;
+  private readonly pluginWarnings = new Map<
+    string,
+    { at: number; suppressed: number }
+  >();
   private connectedAt: number | null = null;
+  private recordEvents = false;
   private name: string | null = null;
   // Details of the last connection attempt, whether or not it succeeded
   private attemptedTarget: ConnectionTarget | null = null;
@@ -188,6 +197,7 @@ export class ServerRuntime {
       matches: deps.matches,
       records: deps.records,
       users: deps.users,
+      syncMap: () => this.liveSync.syncMap(),
       log,
     });
     this.liveSync = new LiveSync({
@@ -199,7 +209,15 @@ export class ServerRuntime {
       recorder,
       log,
     });
-    this.commands = new ServerCommands({ gbx, state, bus, chat, mapList, log });
+    this.commands = new ServerCommands({
+      gbx,
+      state,
+      bus,
+      chat,
+      mapList,
+      recorder,
+      log,
+    });
 
     const systemCommands = new SystemCommands({
       serverId,
@@ -279,6 +297,8 @@ export class ServerRuntime {
             errors: deps.errors ?? noopErrorReporter,
             disablePlugin: (pluginId, name, reason) =>
               this.disablePlugin(pluginId, name, reason),
+            warnPlugin: (pluginId, name, reason) =>
+              this.warnPlugin(pluginId, name, reason),
           },
           definition,
           record,
@@ -479,6 +499,41 @@ export class ServerRuntime {
     await this.refreshPlugins();
   }
 
+  // A plugin hit a soft limit: tell the admins, at most once per plugin every 10 minutes
+  async warnPlugin(
+    pluginId: string,
+    name: string,
+    reason: string,
+  ): Promise<void> {
+    const now = this.deps.clock.now();
+    const last = this.pluginWarnings.get(pluginId);
+    if (last && now - last.at < PLUGIN_WARNING_INTERVAL_MS) {
+      last.suppressed += 1;
+      return;
+    }
+    const suppressed = last?.suppressed ?? 0;
+    this.pluginWarnings.set(pluginId, { at: now, suppressed: 0 });
+    try {
+      const notifications = await this.deps.notifications.createForServerAdmins(
+        {
+          serverId: this.serverId,
+          type: "pluginWarning",
+          message: `Plugin ${name} is running slowly on ${this.name ?? "the server"}`,
+          description:
+            suppressed > 0
+              ? `${reason}. ${suppressed} more since the last warning.`
+              : reason,
+        },
+      );
+      this.events.emit("adminCommand", notifications);
+    } catch (error) {
+      this.log.error(
+        { err: error, pluginId: name },
+        "Failed to warn admins about a plugin",
+      );
+    }
+  }
+
   // server_plugins changed in the database
   async refreshPlugins(): Promise<void> {
     this.state.plugins = await this.deps.servers.findPlugins(this.serverId);
@@ -493,6 +548,7 @@ export class ServerRuntime {
 
     this.name = record.name;
     this.state.enableHelpCommand = record.enableHelpCommand;
+    this.setRecording(record.recordEvents);
     await this.refreshChatConfig(record.chat);
     await this.refreshTheme(record.theme, record.themeData);
 
@@ -610,6 +666,7 @@ export class ServerRuntime {
       await this.initialize(server, session);
     } catch (error) {
       this.log.error({ err: error }, "Failed to initialize GBX session");
+      this.markRecording("Disconnected");
       this.session = null;
       await session.disconnect().catch(() => undefined);
       throw error;
@@ -633,6 +690,10 @@ export class ServerRuntime {
     server: ServerRecord,
     session: GbxSession,
   ): Promise<void> {
+    this.recordEvents = server.recordEvents;
+    this.markRecording("Connected");
+    this.archiveCallbacks(session);
+
     await session.call("SetApiVersion", API_VERSION);
     await session.call("EnableCallbacks", true);
     await session.callScript("XmlRpc.EnableCallbacks", "true");
@@ -669,6 +730,28 @@ export class ServerRuntime {
     for (const [method, data] of held) this.onCallback(method, data);
   }
 
+  // Attached before callbacks are enabled, so the archive also gets the ones that come during setup
+  private archiveCallbacks(session: GbxSession): void {
+    const { archive } = this.deps;
+    if (!archive) return;
+    session.onCallback((method, data) => {
+      if (this.recordEvents && session === this.session)
+        archive.record(this.serverId, method, data);
+    });
+  }
+
+  private setRecording(enabled: boolean): void {
+    if (enabled === this.recordEvents) return;
+    if (!enabled) this.markRecording("Disconnected");
+    this.recordEvents = enabled;
+    if (enabled) this.markRecording("Connected");
+  }
+
+  private markRecording(state: "Connected" | "Disconnected"): void {
+    if (this.recordEvents && this.session)
+      this.deps.archive?.mark(this.serverId, `TMControlPanel.${state}`, {});
+  }
+
   private onCallback(method: string, data: unknown): void {
     // Raw, for plugins that need a callback the runtime doesn't handle
     if (this.events.listenerCount("gbxCallback") > 0) {
@@ -686,6 +769,7 @@ export class ServerRuntime {
 
   private async onSessionLost(session: GbxSession): Promise<void> {
     if (session !== this.session) return;
+    this.markRecording("Disconnected");
     this.session = null;
 
     if (!this.connected) return;
@@ -714,6 +798,7 @@ export class ServerRuntime {
       this.events.emit("disconnect");
     }
 
+    this.markRecording("Disconnected");
     this.session = null;
     this.manialinks.clear();
     try {

@@ -21,6 +21,16 @@ Release notes of TMControlPanel, newest first. The entries are the descriptions 
 - The event archive stores mode script callbacks that the dedicated server sends as indented JSON under their script event name, instead of as escaped strings under `ManiaPlanet.ModeScriptCallbackArray`.
 - Finishes during warm-up and pauses are stored without a match, and finishes of cancelled or repeated runs are detached instead of overwritten.
 
+### Plugins
+
+Versions below are the latest published ones.
+
+- **eCircuitMania** 2.1.1 → 2.2.0. Requests are paced to stay under the rate limit, so finishes and rounds are no longer lost, and a failed request is retried once before it is reported to Sentry. Sending player finishes is now an option that is off by default, also for existing installs: turn on "Send player finishes" to keep sending every finish.
+- **Live Round** 2.1.8 → 2.1.11. Uses far less CPU during busy rounds, so large lobbies no longer get the widget turned off. Joining players show up right away with their personal bests.
+- **Player Info** 2.1.1 → 2.1.2. Personal bests of joining players are requested together, and players who join during a map change no longer go missing.
+- **Team Score** 2.1.1 → 2.1.4. Long team names wrap onto two lines inside the name panel, and live data is read once per update.
+- **Live Ranking** 2.1.1 → 2.1.2. Reads live data once per update instead of on every row.
+
 ## [1.1.0] - 2026-11-20
 
 ### Breaking changes

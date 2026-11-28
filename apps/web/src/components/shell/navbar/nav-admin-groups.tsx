@@ -13,17 +13,14 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 import { useServers } from "@/providers/servers-provider";
 import { IconServer } from "@tabler/icons-react";
 import { ChevronRight } from "lucide-react";
 import { useSession } from "next-auth/react";
-import Link from "next/link";
 import { useMemo } from "react";
 import { getServerGroup, ServerNavGroup } from "./nav-groups";
+import { ServerSelectItem } from "./server-select-item";
 
 export default function NavAdminGroups() {
   const { data: session } = useSession();
@@ -77,73 +74,9 @@ export default function NavAdminGroups() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ) : (
-                group.servers.map((server) =>
-                  server.items && server.items.length > 0 ? (
-                    <Collapsible
-                      key={server.id}
-                      asChild
-                      defaultOpen={server.isActive}
-                      className="group/collapsible"
-                    >
-                      <SidebarMenuItem>
-                        <CollapsibleTrigger asChild>
-                          <SidebarMenuButton tooltip={server.name} asChild>
-                            <div className="select-none cursor-pointer group/item">
-                              {server.icon && <server.icon />}
-                              <span className="flex items-center overflow-hidden text-ellipsis text-nowrap">
-                                {server.name}
-                              </span>
-                              <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                            </div>
-                          </SidebarMenuButton>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <SidebarMenuSub>
-                            {server.items
-                              .filter((i) => i.auth || i.auth === undefined)
-                              .map((item) => (
-                                <SidebarMenuSubItem key={item.name}>
-                                  {!(
-                                    !server.isConnected && item.needsConnection
-                                  ) ? (
-                                    <SidebarMenuSubButton asChild>
-                                      {item.url ? (
-                                        <Link href={item.url}>
-                                          {item.icon && <item.icon />}
-                                          <span>{item.name}</span>
-                                        </Link>
-                                      ) : (
-                                        <div>
-                                          {item.icon && <item.icon />}
-                                          <span>{item.name}</span>
-                                        </div>
-                                      )}
-                                    </SidebarMenuSubButton>
-                                  ) : (
-                                    <SidebarMenuSubButton asChild isDisabled>
-                                      <div>
-                                        {item.icon && <item.icon />}
-                                        <span>{item.name}</span>
-                                      </div>
-                                    </SidebarMenuSubButton>
-                                  )}
-                                </SidebarMenuSubItem>
-                              ))}
-                          </SidebarMenuSub>
-                        </CollapsibleContent>
-                      </SidebarMenuItem>
-                    </Collapsible>
-                  ) : (
-                    <SidebarMenuItem key={server.name}>
-                      <SidebarMenuButton asChild>
-                        <div>
-                          {server.icon && <server.icon />}
-                          <span>{server.name}</span>
-                        </div>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ),
-                )
+                group.servers.map((server) => (
+                  <ServerSelectItem key={server.id} server={server} />
+                ))
               )}
             </SidebarMenu>
           </SidebarGroupContent>

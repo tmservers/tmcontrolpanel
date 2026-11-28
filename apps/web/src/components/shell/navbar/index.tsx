@@ -1,12 +1,10 @@
-import { SidebarSeparator } from "@/components/ui/sidebar";
 import { auth, hasPermission } from "@/lib/auth";
 import { routePermissions } from "@/routes";
 import { Icon } from "@tabler/icons-react";
 import NavAdmin from "./nav-admin";
-import NavAdminGroups from "./nav-admin-groups";
 import NavFooter from "./nav-footer";
-import NavGroups from "./nav-groups";
 import NavPlugins from "./nav-plugins";
+import ServerNav from "./server-nav";
 
 export interface NavItem {
   id?: number;
@@ -60,11 +58,13 @@ export default async function Navbar() {
 
   return (
     <>
-      {session && <NavGroups />}
-      {session?.user.admin && session?.user.adminGroups.length > 0 && (
-        <SidebarSeparator />
+      {session && (
+        <ServerNav
+          showAdminGroups={
+            !!session.user.admin && session.user.adminGroups.length > 0
+          }
+        />
       )}
-      {session?.user.admin && <NavAdminGroups />}
       {session && canViewPlugins && <NavPlugins />}
       {session && canViewAdmin && (
         <NavAdmin

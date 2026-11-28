@@ -4,16 +4,16 @@ import FormElement from "@/components/form/form-element";
 import { Button } from "@/components/ui/button";
 import { Form, FormLabel } from "@/components/ui/form";
 import { useSearchUsers } from "@/hooks/use-search-users";
-import { UserServerRole } from "@tmcontrolpanel/db";
 import { getErrorMessage } from "@/lib/utils";
 import { HetznerServerCache } from "@/types/api/hetzner/servers";
+import { ServerError } from "@/types/responses";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
+import { UserServerRole } from "@tmcontrolpanel/db";
 import { useSession } from "next-auth/react";
 import { DefaultValues, useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { AddServerSchema, AddServerSchemaType } from "./add-server-schema";
-import { ServerError } from "@/types/responses";
 
 export default function AddServerForm({
   callback,
@@ -22,7 +22,7 @@ export default function AddServerForm({
   callback?: () => void;
   recentlyCreatedServers?: HetznerServerCache[];
 }) {
-  const { data: session } = useSession();
+  const { data: session, update } = useSession();
 
   const { search, searchResults, searching, loading } = useSearchUsers({
     defaultUsers: session ? [session.user.id] : [],
@@ -86,6 +86,8 @@ export default function AddServerForm({
         throw new ServerError(error, "CreateServerError");
       }
       toast.success("Server successfully added");
+      // Refreshes the session so the sidebar picks up the new server and group
+      void update();
       if (callback) {
         callback();
       }

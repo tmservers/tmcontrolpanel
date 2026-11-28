@@ -10,6 +10,8 @@ interface WebSocketProps {
   onError?: (error: unknown) => void;
   onOpen?: () => void;
   onClose?: () => void;
+  // Changing this reopens the socket with a fresh ticket, e.g. after access changes
+  reconnectKey?: string;
 }
 
 async function fetchTicket(): Promise<Ticket> {
@@ -26,6 +28,7 @@ export default function useWebSocket({
   onError,
   onOpen,
   onClose,
+  reconnectKey,
 }: WebSocketProps) {
   const { status } = useSession();
   const wsRef = useRef<WebSocket | null>(null);
@@ -55,6 +58,7 @@ export default function useWebSocket({
   }, [
     path,
     status,
+    reconnectKey,
     stableOnMessage,
     stableOnError,
     stableOnOpen,

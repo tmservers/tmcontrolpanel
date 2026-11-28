@@ -5,7 +5,12 @@ import { serverStatusToast } from "@/lib/server-status-toast";
 import { getCurrentId } from "@/lib/utils";
 import { connectionRoutes } from "@/routes";
 import { ServerError } from "@/types/responses";
-import { ServerInfo, wsPaths } from "@tmcontrolpanel/shared";
+import {
+  getAccessibleServers,
+  ServerInfo,
+  wsPaths,
+} from "@tmcontrolpanel/shared";
+import { useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   createContext,
@@ -43,6 +48,15 @@ export const ServersProvider = ({
 }) => {
   const pathname = usePathname();
   const router = useRouter();
+  const { data: session } = useSession();
+
+  // The socket's server list comes from its ticket, so reopen it when access changes
+  const accessKey = session
+    ? getAccessibleServers(session.user)
+        .map((s) => `${s.id}:${s.name}`)
+        .sort()
+        .join(",")
+    : "";
 
   const [servers, setServers] = useState<ServerInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -122,6 +136,7 @@ export const ServersProvider = ({
   useWebSocket({
     path: wsPaths.servers,
     onMessage: handleMessage,
+    reconnectKey: accessKey,
     onOpen: () => {
       snapshotAt.current = 0;
     },

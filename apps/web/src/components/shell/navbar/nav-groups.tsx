@@ -7,23 +7,14 @@ import IconNadeo from "@/components/icons/nadeo";
 import IconTmx from "@/components/icons/tmx-svg";
 import { Button } from "@/components/ui/button";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 import { generatePath, getErrorMessage, hasPermissionSync } from "@/lib/utils";
-import { useNotifications } from "@/providers/notification-provider";
 import { useServers } from "@/providers/servers-provider";
 import { connectionRoutes, routePermissions, routes } from "@/routes";
 import { UserGroup } from "@/types/auth";
@@ -46,12 +37,11 @@ import {
   IconUsers,
 } from "@tabler/icons-react";
 import { ServerInfo } from "@tmcontrolpanel/shared";
-import { ChevronRight } from "lucide-react";
 import { Session } from "next-auth";
 import { useSession } from "next-auth/react";
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { ServerSelectItem } from "./server-select-item";
 
 export interface ServerNavGroup {
   id: string;
@@ -249,7 +239,6 @@ export function getServerGroup(
 
 export default function NavGroups() {
   const { data: session } = useSession();
-  const { notifications } = useNotifications();
 
   const { servers, serverId, loading } = useServers();
 
@@ -446,106 +435,15 @@ export default function NavGroups() {
               </SidebarMenuButton>
             </SidebarMenuItem>
           ) : (
-            group.servers.map((server) =>
-              server.items && server.items.length > 0 ? (
-                <Collapsible
-                  key={server.id}
-                  asChild
-                  defaultOpen={server.isActive}
-                  className="group/collapsible"
-                >
-                  <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton tooltip={server.name} asChild>
-                        <div className="select-none cursor-pointer group/item">
-                          {server.icon && <server.icon />}
-                          <span className="overflow-hidden text-ellipsis text-nowrap flex items-center">
-                            {server.name}
-                            {notifications.some(
-                              (n) => n.serverId === server.id && !n.read,
-                            ) && (
-                              <span className="ml-2 h-3 w-3 text-center rounded-full bg-destructive text-[8px]">
-                                {
-                                  notifications.filter(
-                                    (n) => n.serverId === server.id && !n.read,
-                                  ).length
-                                }
-                              </span>
-                            )}
-                          </span>
-                          <div className="hidden group-hover/item:flex ml-auto items-end">
-                            <Button
-                              size="sidebar"
-                              variant="ghost"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                moveServer(group.id, server.id, "up");
-                              }}
-                            >
-                              <IconChevronUp className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sidebar"
-                              variant="ghost"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                moveServer(group.id, server.id, "down");
-                              }}
-                            >
-                              <IconChevronDown className="w-4 h-4" />
-                            </Button>
-                          </div>
-                          <ChevronRight className="ml-auto group-hover/item:ml-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                        </div>
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <SidebarMenuSub>
-                        {server.items
-                          .filter((i) => i.auth || i.auth === undefined)
-                          .map((item) => (
-                            <SidebarMenuSubItem key={item.name}>
-                              {!(
-                                !server.isConnected && item.needsConnection
-                              ) ? (
-                                <SidebarMenuSubButton asChild>
-                                  {item.url ? (
-                                    <Link href={item.url}>
-                                      {item.icon && <item.icon />}
-                                      <span>{item.name}</span>
-                                    </Link>
-                                  ) : (
-                                    <div>
-                                      {item.icon && <item.icon />}
-                                      <span>{item.name}</span>
-                                    </div>
-                                  )}
-                                </SidebarMenuSubButton>
-                              ) : (
-                                <SidebarMenuSubButton asChild isDisabled>
-                                  <div>
-                                    {item.icon && <item.icon />}
-                                    <span>{item.name}</span>
-                                  </div>
-                                </SidebarMenuSubButton>
-                              )}
-                            </SidebarMenuSubItem>
-                          ))}
-                      </SidebarMenuSub>
-                    </CollapsibleContent>
-                  </SidebarMenuItem>
-                </Collapsible>
-              ) : (
-                <SidebarMenuItem key={server.name}>
-                  <SidebarMenuButton asChild>
-                    <div>
-                      {server.icon && <server.icon />}
-                      <span>{server.name}</span>
-                    </div>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ),
-            )
+            group.servers.map((server) => (
+              <ServerSelectItem
+                key={server.id}
+                server={server}
+                onMove={(direction) =>
+                  moveServer(group.id, server.id, direction)
+                }
+              />
+            ))
           )}
         </SidebarMenu>
       </SidebarGroupContent>

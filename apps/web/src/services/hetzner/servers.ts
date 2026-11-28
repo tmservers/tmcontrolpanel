@@ -10,6 +10,7 @@ import {
   getKeyHetznerRecentlyCreatedServers,
   getRedisClient,
 } from "@/lib/redis";
+import { assertResourceId } from "@/lib/resource-id";
 import { hasPermissionSync } from "@/lib/utils";
 import {
   HetznerServer,
@@ -242,4 +243,45 @@ function withoutCredentialLabels(server: HetznerServer): HetznerServer {
       ),
     ),
   };
+}
+
+export type HetznerDediServer = {
+  id: number;
+  name: string;
+  ip: string | null;
+  status: HetznerServer["status"];
+  // Trackmania servers already running on this machine
+  tmServers: number;
+};
+
+// Machines provisioned by the panel, for picking one to add a Trackmania server to
+export async function getDediServers(
+  projectId: string,
+): Promise<ServerResponse<HetznerDediServer[]>> {
+  assertResourceId(projectId);
+  return doServerActionWithAuth(
+    [
+      "hetzner:servers:view",
+      `hetzner:${projectId}:moderator`,
+      `hetzner:${projectId}:admin`,
+    ],
+    async () => {
+      const token = await getApiToken(projectId);
+      const res = await axiosHetzner.get<HetznerServersResponse>("/servers", {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { label_selector: "type=dedi", per_page: 50 },
+      });
+      await setRateLimit(projectId, res);
+
+      return res.data.servers.map((server) => ({
+        id: server.id,
+        name: server.name,
+        ip: server.public_net.ipv4?.ip ?? null,
+        status: server.status,
+        tmServers: Object.keys(server.labels).filter((key) =>
+          /^\d+\.version$/.test(key),
+        ).length,
+      }));
+    },
+  );
 }

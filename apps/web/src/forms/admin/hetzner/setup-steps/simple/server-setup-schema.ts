@@ -10,6 +10,8 @@ export const SimpleServerSetupSchema = z.object({
   createServer: z.boolean(),
   updateServer: z.boolean(),
   groupId: z.string(),
+  // Quick setup: create a group for the server when none is picked
+  newGroup: z.boolean().optional(),
   serverId: z.string(),
 });
 

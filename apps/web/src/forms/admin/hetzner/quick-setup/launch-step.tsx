@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { useHetznerProvisioning } from "@/hooks/use-hetzner-queries";
 import { ProvisioningStage } from "@/lib/hetzner-provisioning";
 import { generatePath, getErrorMessage } from "@/lib/utils";
@@ -26,6 +26,8 @@ export type LaunchedServer = {
   panelServerId?: string;
   panelServerError?: string;
   name: string;
+  // Set when the server was added to a machine that already existed
+  machineName?: string;
 };
 
 export default function LaunchStep({
@@ -56,7 +58,8 @@ export default function LaunchStep({
   const unlinked =
     !server.panelServerId || (!!data?.ip && data.panelConnected === null);
   const warn = failed || (slow && !connected);
-  const active = stage ? ACTIVE_STEP[stage] : 0;
+  // An existing machine is already created and booted
+  const active = stage ? ACTIVE_STEP[stage] : server.machineName ? 2 : 0;
 
   const state = (index: number): TimelineItem["state"] => {
     // The server exists as soon as this step opens, even if its state went bad
@@ -69,7 +72,9 @@ export default function LaunchStep({
 
   const items: TimelineItem[] = [
     {
-      label: "Hetzner server created",
+      label: server.machineName
+        ? `Added to ${server.machineName}`
+        : "Hetzner server created",
       sub: data
         ? [data.serverType, data.ip].filter(Boolean).join(" · ")
         : undefined,
@@ -78,7 +83,7 @@ export default function LaunchStep({
     { label: "Booted", state: state(1) },
     {
       label: "Installing dedicated server",
-      sub: "Usually 2–4 minutes",
+      sub: server.machineName ? undefined : "Usually 2–4 minutes",
       state: state(2),
     },
     unlinked
@@ -146,17 +151,17 @@ export default function LaunchStep({
           Close
         </Button>
         {connected && server.panelServerId ? (
-          <Button asChild>
-            <Link
-              href={generatePath(routes.servers.live, {
-                id: server.panelServerId,
-              })}
-              onClick={onClose}
-            >
-              Open server
-              <IconArrowNarrowRight />
-            </Link>
-          </Button>
+          // Button asChild renders nothing: it maps children into an array, which Slot rejects
+          <Link
+            href={generatePath(routes.servers.live, {
+              id: server.panelServerId,
+            })}
+            onClick={onClose}
+            className={buttonVariants()}
+          >
+            Open server
+            <IconArrowNarrowRight />
+          </Link>
         ) : (
           <Button type="button" disabled>
             Open server

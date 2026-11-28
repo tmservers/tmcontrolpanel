@@ -13,6 +13,7 @@ import { axiosHetzner } from "@/lib/axios/hetzner";
 import { getClient } from "@/lib/dbclient";
 import { publishServerEvent } from "@/lib/gbx-service";
 import { assertProvisioningChoices } from "@/lib/handlebars";
+import { controllerForProvisioning } from "@/lib/hetzner-controller";
 import {
   getKeyHetznerRecentlyCreatedServers,
   getRedisClient,
@@ -226,7 +227,9 @@ export async function createAdvancedServerSetup(
       }
 
       const dediData = {
-        server_controller: server.controller ? serverController : undefined,
+        server_controller: server.controller
+          ? controllerForProvisioning(serverController)
+          : undefined,
         db: {
           type: database?.databaseType || "mysql",
           host:
@@ -349,20 +352,7 @@ export async function createAdvancedServerSetup(
             serverId: newServer.id,
           });
 
-          if (data.groupId) {
-            await db.groups.update({
-              where: { id: data.groupId },
-              data: {
-                groupServers: {
-                  create: [
-                    {
-                      serverId: newServer.id,
-                    },
-                  ],
-                },
-              },
-            });
-          }
+          await addPanelServerToGroup(session, newServer, data);
         } else if (data.updateServer && data.serverId) {
           const db = getClient();
           const existingServer = await db.servers.findUnique({
@@ -563,7 +553,9 @@ export async function createSimpleServerSetup(
       }
 
       const dediData = {
-        server_controller: server.controller ? serverController : undefined,
+        server_controller: server.controller
+          ? controllerForProvisioning(serverController)
+          : undefined,
         db: {
           type: database?.databaseType || "mysql",
           host: database?.databaseIp || "10.0.0.2",
@@ -682,20 +674,7 @@ export async function createSimpleServerSetup(
             serverId: newServer.id,
           });
 
-          if (data.groupId) {
-            await db.groups.update({
-              where: { id: data.groupId },
-              data: {
-                groupServers: {
-                  create: [
-                    {
-                      serverId: newServer.id,
-                    },
-                  ],
-                },
-              },
-            });
-          }
+          await addPanelServerToGroup(session, newServer, data);
         } else if (data.updateServer && data.serverId) {
           const db = getClient();
           const existingServer = await db.servers.findUnique({
@@ -786,17 +765,26 @@ export async function createSimpleServerSetup(
   );
 }
 
+export type AddTrackmaniaServerResult = {
+  serverNumber: number;
+  name: string;
+  panelServerId?: string;
+  panelServerError?: string;
+};
+
 export async function addTrackmaniaServer(
   projectId: string,
   serverId: number,
   tmServer: TMServerSchemaType,
-) {
+): Promise<ServerResponse<AddTrackmaniaServerResult>> {
   assertResourceId(projectId);
   return doServerActionWithAuth(
     ["hetzner:servers:create", `hetzner:${projectId}:admin`],
     async (session) => {
       requireServerCredentialsKey();
       await authorizePanelTarget(session, tmServer);
+      const serverController = tmServer.serverController;
+      assertProvisioningChoices(undefined, serverController?.type);
       const la = (error?: string, result?: string) =>
         logAudit(
           session.user.id,
@@ -807,6 +795,10 @@ export async function addTrackmaniaServer(
             server: {
               ...tmServer,
               dediPassword: "*****",
+              serverController: serverController && {
+                ...serverController,
+                secret: "secret" in serverController ? "*****" : undefined,
+              },
             },
             createServer: tmServer.createServer,
             groupId: tmServer.groupId,
@@ -865,6 +857,20 @@ export async function addTrackmaniaServer(
         xmlrpc_port: 5000 + serverNumber,
         fm_port: 3300 + serverNumber,
         stack_name: `stack-${serverNumber}`,
+        server_controller: controllerForProvisioning(serverController),
+        // Each stack gets its own database container, reachable by service name only
+        db: serverController
+          ? {
+              type: "mysql",
+              host: "mysql",
+              port: 3306,
+              name: "controller",
+              user: generateRandomString(16),
+              password: generateRandomString(16),
+              root_password: generateRandomString(16),
+              local: true,
+            }
+          : undefined,
       };
 
       const script = tmServerTemplate(dediData);
@@ -900,6 +906,9 @@ export async function addTrackmaniaServer(
         [`${serverNumber}.authorization.user.password`]: dediData.user_password,
         [`${serverNumber}.filemanager.password`]: dediData.filemanager_password,
         [`${serverNumber}.version`]: "1",
+        ...(serverController && {
+          [`${serverNumber}.servercontroller.type`]: serverController.type,
+        }),
       });
 
       const cachedServer: HetznerServerCache = {
@@ -913,6 +922,8 @@ export async function addTrackmaniaServer(
         filemanagerPassword: dediData.filemanager_password,
       };
 
+      let panelServerId: string | undefined;
+      let panelServerError: string | undefined;
       try {
         if (tmServer.createServer) {
           const db = getClient();
@@ -938,25 +949,13 @@ export async function addTrackmaniaServer(
               },
             },
           });
+          panelServerId = newServer.id;
           await publishServerEvent({
             type: "server.created",
             serverId: newServer.id,
           });
 
-          if (tmServer.groupId) {
-            await db.groups.update({
-              where: { id: tmServer.groupId },
-              data: {
-                groupServers: {
-                  create: [
-                    {
-                      serverId: newServer.id,
-                    },
-                  ],
-                },
-              },
-            });
-          }
+          await addPanelServerToGroup(session, newServer, tmServer);
         } else if (tmServer.updateServer && tmServer.serverId) {
           const db = getClient();
           const existingServer = await db.servers.findUnique({
@@ -981,6 +980,7 @@ export async function addTrackmaniaServer(
               ),
             },
           });
+          panelServerId = tmServer.serverId;
           await publishServerEvent({
             type: "server.updated",
             serverId: tmServer.serverId,
@@ -993,9 +993,20 @@ export async function addTrackmaniaServer(
         }
       } catch (error) {
         la(getErrorMessage(error));
+        panelServerError =
+          error instanceof ServerError
+            ? error.message
+            : "The panel server could not be saved.";
       }
 
       la(undefined, result.stdout);
+
+      return {
+        serverNumber,
+        name: cachedServer.name,
+        panelServerId,
+        panelServerError,
+      };
     },
   );
 }
@@ -1088,6 +1099,40 @@ export async function deleteTrackmaniaServer(
       la(undefined, result.stdout);
     },
   );
+}
+
+// Files a new panel server under the chosen group; quick setup (newGroup) falls back
+// to a fresh group named after the server so it always shows in the sidebar
+async function addPanelServerToGroup(
+  session: Session,
+  server: { id: string; name: string },
+  target: { groupId?: string; newGroup?: boolean },
+) {
+  const db = getClient();
+
+  if (target.groupId) {
+    await db.groups.update({
+      where: { id: target.groupId },
+      data: { groupServers: { create: [{ serverId: server.id }] } },
+    });
+    return;
+  }
+
+  if (target.newGroup !== true) return;
+
+  const group = await db.groups.create({
+    data: {
+      name: server.name,
+      description: "",
+      groupServers: { create: [{ serverId: server.id }] },
+      groupMembers: { create: [{ userId: session.user.id, role: "Admin" }] },
+    },
+  });
+  await logAudit(session.user.id, group.id, "group.create", {
+    name: group.name,
+    groupServers: [server.id],
+    source: "hetzner.quickSetup",
+  });
 }
 
 // Checked before any paid cloud call: provisioning may only touch panel servers and groups

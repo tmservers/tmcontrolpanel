@@ -13,9 +13,9 @@ import { HetznerServerType } from "@/types/api/hetzner/servers";
 import { HetznerSSHKey } from "@/types/api/hetzner/ssh-keys";
 import { UserGroup } from "@/types/auth";
 import { IconChevronRight } from "@tabler/icons-react";
-import { useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { SimpleServerSetupSchemaType } from "../setup-steps/simple/server-setup-schema";
+import { GroupField } from "./panel-target-fields";
 
 export default function CustomizeFields({
   open,
@@ -37,11 +37,8 @@ export default function CustomizeFields({
   groups: UserGroup[];
 }) {
   const form = useFormContext<SimpleServerSetupSchemaType>();
-  const [groupClears, setGroupClears] = useState(0);
   const location = form.watch("server.location");
   const typeId = form.watch("server.serverType");
-  const groupId = form.watch("groupId");
-  const createServer = form.watch("createServer");
 
   // The selected type stays listed until it has been swapped for one sold here
   const typeOptions = serverTypes
@@ -105,26 +102,7 @@ export default function CustomizeFields({
           }))}
           rootClassName="max-w-full min-w-0"
         />
-        {createServer && groups.length > 0 && (
-          <FormElement
-            // Remounted when cleared, so the placeholder comes back
-            key={`group-${groupClears}`}
-            name="groupId"
-            label="Add to group"
-            placeholder="No group"
-            type="select"
-            options={groups.map((g) => ({ label: g.name, value: g.id }))}
-            onClear={
-              groupId
-                ? () => {
-                    form.setValue("groupId", "");
-                    setGroupClears((v) => v + 1);
-                  }
-                : undefined
-            }
-            rootClassName="max-w-full"
-          />
-        )}
+        <GroupField groups={groups} />
       </CollapsibleContent>
     </Collapsible>
   );

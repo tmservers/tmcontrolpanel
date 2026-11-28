@@ -47,8 +47,10 @@ services:
       ADMINS: ${MINI_ADMINS}
     volumes:
       - user-data:/server/UserData
+    # Controllers give up or hang when the game server isn't ready yet
     depends_on:
-      - dedicated
+      dedicated:
+        condition: service_healthy
 
 volumes:
   user-data:

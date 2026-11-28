@@ -66,3 +66,8 @@ export const getServerProvisioning = (
     `${project(projectId)}/servers/${serverId}/provisioning`,
     panelServerId ? { panelServerId } : undefined,
   );
+
+export const getDediServers = (
+  projectId: string,
+): ReturnType<typeof Servers.getDediServers> =>
+  apiGet(`${project(projectId)}/servers/dedi`);

@@ -1,5 +1,6 @@
 import { axiosHetzner } from "@/lib/axios/hetzner";
 import { getHetznerProject } from "@/lib/hetzner";
+import { logger } from "@/lib/logger";
 import { getKeyHetznerRateLimit, getRedisClient } from "@/lib/redis";
 import { assertNumericId } from "@/lib/resource-id";
 import { generateSSHKeyPair } from "@/lib/ssh";
@@ -8,10 +9,14 @@ import {
   HetznerServer,
   HetznerServersResponse,
 } from "@/types/api/hetzner/servers";
-import { HetznerSSHKeyResponse } from "@/types/api/hetzner/ssh-keys";
+import {
+  HetznerSSHKeyResponse,
+  HetznerSSHKeysResponse,
+} from "@/types/api/hetzner/ssh-keys";
 import { ServerError } from "@/types/responses";
 import { AxiosResponse } from "axios";
 import "server-only";
+import sshpk from "sshpk";
 
 // Machines provisioned before the rename keep the old extract directory; new ones use the new one
 export const HETZNER_DIR_SHELL =
@@ -81,6 +86,37 @@ export async function getHetznerServer(
   await setRateLimit(projectId, res);
 
   return res.data.server;
+}
+
+// Best effort: removes the panel-generated key of a deleted server so keys don't pile up
+export async function deleteHetznerSSHKeyByPublicKey(
+  projectId: string,
+  publicKey: string,
+) {
+  try {
+    const fingerprint = sshpk
+      .parseKey(publicKey, "ssh")
+      .fingerprint("md5")
+      .toString("hex");
+    const token = await getApiToken(projectId);
+    const headers = { Authorization: `Bearer ${token}` };
+    const res = await axiosHetzner.get<HetznerSSHKeysResponse>("/ssh_keys", {
+      headers,
+      params: { fingerprint },
+    });
+    for (const key of res.data.ssh_keys) {
+      assertNumericId(key.id);
+      await axiosHetzner.delete(`/ssh_keys/${key.id}`, { headers });
+    }
+  } catch (error) {
+    logger.warn(
+      {
+        meta: { module: "hetzner", function: "deleteHetznerSSHKeyByPublicKey" },
+        error,
+      },
+      "Could not delete the server's Hetzner SSH key",
+    );
+  }
 }
 
 export async function createHetznerSSHKey(

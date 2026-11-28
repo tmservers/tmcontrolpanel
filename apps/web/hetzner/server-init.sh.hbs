@@ -19,13 +19,14 @@ if [ -d tmcontrolpanel-master/apps/web/hetzner ] && [ ! -d tmcontrolpanel-master
 fi
 cd tmcontrolpanel-master/hetzner
 
+BASE_DIR=/root/tmcontrolpanel-master
 STACK_NAME={{sh stack_name}}
-STACK_DIR="/root/tmcontrolpanel-master/hetzner/$STACK_NAME"
+STACK_DIR="$BASE_DIR/hetzner/$STACK_NAME"
 ENV_FILE="$STACK_DIR/.env"
 mkdir -p "$(dirname "$ENV_FILE")"
 
 CONTROLLER_TYPE={{sh server_controller.type}}
-COMPOSE_DIR="/root/tmcontrolpanel-master/hetzner/$CONTROLLER_TYPE"
+COMPOSE_DIR="$BASE_DIR/hetzner/$CONTROLLER_TYPE"
 COMPOSE_FILES="-f $COMPOSE_DIR/docker-compose.yml"
 
 TM_SYSTEM_FORCE_IP_ADDRESS=$(dig +short myip.opendns.com @resolver1.opendns.com)
@@ -53,50 +54,7 @@ cat >> "$ENV_FILE" <<EOF
 TM_SYSTEM_FORCE_IP_ADDRESS=${TM_SYSTEM_FORCE_IP_ADDRESS}
 EOF
 
-{{#if server_controller}}
-{{#if server_controller.type}}
-cat >> "$ENV_FILE" <<'EOF'
-DB_HOST={{env db.host}}
-DB_PORT={{env db.port}}
-DB_NAME={{env db.name}}
-DB_USER={{env db.user}}
-DB_PASSWORD={{env db.password}}
-DB_ROOT_PASSWORD={{env db.root_password}}
-EOF
-
-{{#if db.local}}
-DB_TYPE={{sh db.type}}
-sed -i "s/^DB_HOST=.*/DB_HOST=$DB_TYPE/" "$ENV_FILE"
-
-COMPOSE_FILES="$COMPOSE_FILES -f /root/tmcontrolpanel-master/hetzner/docker-configs/docker-compose.$DB_TYPE.yml"
-{{/if}}
-{{/if}}
-
-{{#if (eq server_controller.type "evosc")}}
-{{/if}}
-
-{{#if (eq server_controller.type "maniacontrol")}}
-cat >> "$ENV_FILE" <<'EOF'
-MC_ADMINS={{env server_controller.admins}}
-EOF
-{{/if}}
-
-{{#if (eq server_controller.type "minicontrol")}}
-cat >> "$ENV_FILE" <<'EOF'
-MINI_ADMINS={{env server_controller.admins}}
-MINI_EXCLUDED_PLUGINS={{env server_controller.excludedPlugins}}
-MINI_CONTACT_INFO={{env server_controller.contactInfo}}
-MINI_IDENTIFIER={{env server_controller.identifier}}
-MINI_SECRET={{env server_controller.secret}}
-EOF
-{{/if}}
-
-{{#if (eq server_controller.type "pyplanet")}}
-cat >> "$ENV_FILE" <<'EOF'
-PY_ADMINS={{env server_controller.admins}}
-EOF
-{{/if}}
-{{/if}}
+{{> controller-env}}
 
 docker compose \
   --env-file "$ENV_FILE" \

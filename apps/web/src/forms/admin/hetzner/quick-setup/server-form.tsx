@@ -1,15 +1,13 @@
 "use client";
 
 import { createSimpleServerSetup } from "@/actions/hetzner/server-setup";
-import FormElement from "@/components/form/form-element";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import {
   defaultServerTypeId,
   serverNameFromLogin,
 } from "@/lib/hetzner-defaults";
-import { getErrorMessage, hasPermissionSync } from "@/lib/utils";
-import { routePermissions } from "@/routes";
+import { getErrorMessage } from "@/lib/utils";
 import { HetznerLocation } from "@/types/api/hetzner/locations";
 import { HetznerServerType } from "@/types/api/hetzner/servers";
 import { HetznerSSHKey } from "@/types/api/hetzner/ssh-keys";
@@ -20,7 +18,6 @@ import {
   IconLoader2,
   IconRocket,
 } from "@tabler/icons-react";
-import { useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -28,19 +25,17 @@ import {
   SimpleServerSetupSchema,
   SimpleServerSetupSchemaType,
 } from "../setup-steps/simple/server-setup-schema";
+import ControllerFields, { cleanServerController } from "./controller-fields";
+import CredentialFields from "./credential-fields";
 import CustomizeFields from "./customize-fields";
 import { LaunchedServer } from "./launch-step";
-import PanelTargetFields from "./panel-target-fields";
+import PanelTargetFields, {
+  requireReplaceTarget,
+  usePanelTargets,
+} from "./panel-target-fields";
 
-const QuickServerSchema = SimpleServerSetupSchema.superRefine((values, ctx) => {
-  if (values.updateServer && !values.serverId) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["serverId"],
-      message: "Select the panel server to replace",
-    });
-  }
-});
+const QuickServerSchema =
+  SimpleServerSetupSchema.superRefine(requireReplaceTarget);
 
 export default function ServerForm({
   projectId,
@@ -54,20 +49,10 @@ export default function ServerForm({
   locations: HetznerLocation[];
   serverTypes: HetznerServerType[];
   sshKeys: HetznerSSHKey[];
-  onBack?: () => void;
+  onBack: () => void;
   onLaunched: (server: LaunchedServer) => void;
 }) {
-  const { data: session } = useSession();
-
-  // Only targets the setup action will accept
-  const groups =
-    session?.user.groups.filter((g) =>
-      hasPermissionSync(session, routePermissions.admin.groups.edit, g.id),
-    ) ?? [];
-  const panelServers =
-    session?.user.servers.filter((s) =>
-      hasPermissionSync(session, routePermissions.admin.servers.edit, s.id),
-    ) ?? [];
+  const { groups, servers: panelServers } = usePanelTargets();
 
   const defaultLocation =
     locations.find((l) => l.name === "fsn1")?.name ?? locations[0]?.name ?? "";
@@ -134,9 +119,14 @@ export default function ServerForm({
 
   async function onSubmit(values: SimpleServerSetupSchemaType) {
     try {
+      const controller = cleanServerController(values.serverController);
       const { data, error } = await createSimpleServerSetup(projectId, {
         ...values,
-        server: { ...values.server, controller: false },
+        newGroup: true,
+        server: { ...values.server, controller: !!controller },
+        serverController: controller,
+        // The backend fills in the database type and credentials
+        database: controller ? { new: true, local: true } : undefined,
       });
       if (error) {
         throw new ServerError(error, "CreateSimpleServerSetupError");
@@ -175,45 +165,7 @@ export default function ServerForm({
         })}
         className="flex min-w-0 flex-col gap-4"
       >
-        <div className="grid items-start gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1">
-            <FormElement
-              name="server.dediLogin"
-              label="Server login"
-              placeholder="Enter server login"
-              rootClassName="max-w-full"
-              isRequired
-            />
-            <p className="text-xs text-muted-foreground">
-              Create one on the{" "}
-              <a
-                href="https://www.trackmania.com/player/dedicated-servers"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary underline underline-offset-4"
-              >
-                Trackmania dedicated servers page
-              </a>
-              .
-            </p>
-          </div>
-
-          <FormElement
-            name="server.dediPassword"
-            label="Server password"
-            placeholder="Enter server password"
-            type="password"
-            rootClassName="max-w-full"
-            isRequired
-          />
-
-          <FormElement
-            name="server.roomPassword"
-            label="Room password"
-            placeholder="Leave empty for a public server"
-            rootClassName="max-w-full sm:col-span-2"
-          />
-        </div>
+        <CredentialFields prefix="server." />
 
         <div className="flex flex-col gap-1 rounded-md border bg-muted/50 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <span className="text-muted-foreground">
@@ -225,6 +177,8 @@ export default function ServerForm({
             {price ?? "Price unavailable"}
           </span>
         </div>
+
+        <ControllerFields />
 
         <CustomizeFields
           open={customize}
@@ -246,17 +200,15 @@ export default function ServerForm({
         <PanelTargetFields servers={panelServers} />
 
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
-          {onBack && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onBack}
-              disabled={isSubmitting}
-            >
-              <IconArrowNarrowLeft />
-              Back
-            </Button>
-          )}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onBack}
+            disabled={isSubmitting}
+          >
+            <IconArrowNarrowLeft />
+            Back
+          </Button>
           <Button
             type="submit"
             className="sm:ml-auto"

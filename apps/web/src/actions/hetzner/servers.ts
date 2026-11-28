@@ -20,8 +20,14 @@ import { logAudit } from "../database/server-only/audit-logs";
 import {
   createDBHetznerServer,
   deleteDBHetznerServer,
+  getDBHetznerServer,
 } from "../database/server-only/hetzner-servers";
-import { createHetznerSSHKey, getApiToken, setRateLimit } from "./util";
+import {
+  createHetznerSSHKey,
+  deleteHetznerSSHKeyByPublicKey,
+  getApiToken,
+  setRateLimit,
+} from "./util";
 
 const root = packageDirectorySync() || process.cwd();
 
@@ -65,6 +71,11 @@ export async function deleteHetznerServer(
         },
       });
 
+      // The key must outlive provisioning (SSH, file managers, logs), so it goes with the server
+      const dbServer = await getDBHetznerServer(serverId);
+      if (dbServer?.publicKey) {
+        await deleteHetznerSSHKeyByPublicKey(projectId, dbServer.publicKey);
+      }
       await deleteDBHetznerServer(serverId);
 
       await logAudit(

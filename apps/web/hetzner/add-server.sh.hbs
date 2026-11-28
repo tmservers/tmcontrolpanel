@@ -14,7 +14,8 @@ STACK_DIR="$BASE_DIR/hetzner/$STACK_NAME"
 ENV_FILE="$STACK_DIR/.env"
 mkdir -p "$(dirname "$ENV_FILE")"
 
-COMPOSE_DIR="$BASE_DIR/hetzner"
+CONTROLLER_TYPE={{sh server_controller.type}}
+COMPOSE_DIR="$BASE_DIR/hetzner/$CONTROLLER_TYPE"
 COMPOSE_FILES="-f $COMPOSE_DIR/docker-compose.yml"
 
 TM_SYSTEM_FORCE_IP_ADDRESS=$(dig +short myip.opendns.com @resolver1.opendns.com)
@@ -41,6 +42,8 @@ EOF
 cat >> "$ENV_FILE" <<EOF
 TM_SYSTEM_FORCE_IP_ADDRESS=${TM_SYSTEM_FORCE_IP_ADDRESS}
 EOF
+
+{{> controller-env}}
 
 docker compose \
   --env-file "$ENV_FILE" \

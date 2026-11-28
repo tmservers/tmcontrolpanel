@@ -15,6 +15,9 @@ export default async function AdminServersPage() {
   }
 
   const canCreate = await hasPermission(routePermissions.admin.servers.create);
+  const canQuickSetup = await hasPermission(
+    routePermissions.admin.hetzner.create,
+  );
   const canViewClients = (await auth())?.user.admin === true;
 
   const { data: recentlyCreatedServers } =
@@ -35,7 +38,7 @@ export default async function AdminServersPage() {
               endpoint="/api/servers"
               actions={createActions}
               actionsAllowed={canCreate}
-              actionsArgs={{ recentlyCreatedServers }}
+              actionsArgs={{ recentlyCreatedServers, canQuickSetup }}
               filter
             />
           </TabsContent>
@@ -52,7 +55,7 @@ export default async function AdminServersPage() {
           endpoint="/api/servers"
           actions={createActions}
           actionsAllowed={canCreate}
-          actionsArgs={{ recentlyCreatedServers }}
+          actionsArgs={{ recentlyCreatedServers, canQuickSetup }}
           filter
         />
       )}

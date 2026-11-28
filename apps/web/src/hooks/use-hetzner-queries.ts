@@ -1,6 +1,7 @@
 import {
   getAllDatabases,
   getAllNetworks,
+  getDediServers,
   getHetznerLocations,
   getServerProvisioning,
   getServerTypes,
@@ -51,6 +52,14 @@ export const useHetznerDatabases = (projectId: string) =>
   useQuery({
     queryKey: queryKeys.hetzner(projectId, "databases"),
     queryFn: () => unwrap(getAllDatabases(projectId), "GetAllDatabasesError"),
+    gcTime: 0,
+    enabled: !!projectId,
+  });
+
+export const useHetznerDediServers = (projectId: string) =>
+  useQuery({
+    queryKey: queryKeys.hetzner(projectId, "dedi-servers"),
+    queryFn: () => unwrap(getDediServers(projectId), "GetDediServersError"),
     gcTime: 0,
     enabled: !!projectId,
   });

@@ -1,0 +1,43 @@
+# Controller and database settings shared by server-init and add-server; expects ENV_FILE, BASE_DIR and COMPOSE_FILES
+{{#if server_controller}}
+{{#if server_controller.type}}
+cat >> "$ENV_FILE" <<'EOF'
+DB_HOST={{env db.host}}
+DB_PORT={{env db.port}}
+DB_NAME={{env db.name}}
+DB_USER={{env db.user}}
+DB_PASSWORD={{env db.password}}
+DB_ROOT_PASSWORD={{env db.root_password}}
+DB_TYPE={{env db.type}}
+EOF
+
+{{#if db.local}}
+DB_TYPE={{sh db.type}}
+sed -i "s/^DB_HOST=.*/DB_HOST=$DB_TYPE/" "$ENV_FILE"
+
+COMPOSE_FILES="$COMPOSE_FILES -f $BASE_DIR/hetzner/docker-configs/docker-compose.$DB_TYPE.yml"
+{{/if}}
+{{/if}}
+
+{{#if (eq server_controller.type "maniacontrol")}}
+cat >> "$ENV_FILE" <<'EOF'
+MC_ADMINS={{env server_controller.admins}}
+EOF
+{{/if}}
+
+{{#if (eq server_controller.type "minicontrol")}}
+cat >> "$ENV_FILE" <<'EOF'
+MINI_ADMINS={{env server_controller.admins}}
+MINI_EXCLUDED_PLUGINS={{env server_controller.excludedPlugins}}
+MINI_CONTACT_INFO={{env server_controller.contactInfo}}
+MINI_IDENTIFIER={{env server_controller.identifier}}
+MINI_SECRET={{env server_controller.secret}}
+EOF
+{{/if}}
+
+{{#if (eq server_controller.type "pyplanet")}}
+cat >> "$ENV_FILE" <<'EOF'
+PY_ADMINS={{env server_controller.admins}}
+EOF
+{{/if}}
+{{/if}}

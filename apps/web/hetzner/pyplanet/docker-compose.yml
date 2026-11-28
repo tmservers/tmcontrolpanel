@@ -45,8 +45,10 @@ services:
       - ./base.py:/app/server/settings/base.py
       - pyplanet-data:/app/server
       - user-data:/server/UserData
+    # Controllers give up or hang when the game server isn't ready yet
     depends_on:
-      - dedicated
+      dedicated:
+        condition: service_healthy
 
 volumes:
   user-data:

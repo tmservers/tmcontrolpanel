@@ -12,15 +12,27 @@ import { hasPermissionSync } from "@/lib/utils";
 import { routePermissions } from "@/routes";
 import { HetznerProjectRole } from "@tmcontrolpanel/db";
 import { useSession } from "next-auth/react";
-import { useState } from "react";
+import { useState, type ComponentProps } from "react";
+import MachineChoice, { ServerTarget } from "./machine-choice";
 import NewProjectForm from "./new-project-form";
 
 const NEW_PROJECT = "new";
 
-export default function ConnectStep({
+function ConnectStepInner({
+  fixedProjectId,
+  initialProjectId,
+  initialTarget,
   onContinue,
 }: {
-  onContinue: (projectId: string, created: boolean) => void;
+  // Set when the wizard was opened from a project, which hides the picker
+  fixedProjectId?: string;
+  initialProjectId: string;
+  initialTarget: ServerTarget;
+  onContinue: (
+    projectId: string,
+    target: ServerTarget,
+    created: boolean,
+  ) => void;
 }) {
   const { data: session } = useSession();
   const projects =
@@ -34,6 +46,18 @@ export default function ConnectStep({
   // Decided once, so the session refresh after creating doesn't swap the form for the picker
   const [startedEmpty] = useState(() => projects.length === 0);
   const [creating, setCreating] = useState(false);
+  const [projectId, setProjectId] = useState(initialProjectId);
+  const selected = projects.some((p) => p.id === projectId) ? projectId : "";
+
+  if (fixedProjectId) {
+    return (
+      <MachineChoice
+        projectId={fixedProjectId}
+        initialTarget={initialTarget}
+        onContinue={(target) => onContinue(fixedProjectId, target, false)}
+      />
+    );
+  }
 
   if (startedEmpty && !canCreate) {
     return (
@@ -50,10 +74,11 @@ export default function ConnectStep({
         <div className="flex flex-col gap-2">
           <Label htmlFor="quick-setup-project">Hetzner project</Label>
           <Select
-            value={creating ? NEW_PROJECT : ""}
+            value={creating ? NEW_PROJECT : selected}
             onValueChange={(value) => {
-              if (value === NEW_PROJECT) setCreating(true);
-              else if (value) onContinue(value, false);
+              if (!value) return;
+              setCreating(value === NEW_PROJECT);
+              if (value !== NEW_PROJECT) setProjectId(value);
             }}
           >
             <SelectTrigger id="quick-setup-project" className="w-full">
@@ -80,8 +105,28 @@ export default function ConnectStep({
       )}
 
       {(startedEmpty || creating) && (
-        <NewProjectForm onCreated={(id) => onContinue(id, true)} />
+        <NewProjectForm onCreated={(id) => onContinue(id, "new", true)} />
+      )}
+
+      {!startedEmpty && !creating && selected && (
+        <MachineChoice
+          key={selected}
+          projectId={selected}
+          initialTarget={initialTarget}
+          onContinue={(target) => onContinue(selected, target, false)}
+        />
       )}
     </div>
   );
+}
+
+// The picker decides between "new project" and "existing" once, so it must see a loaded session
+export default function ConnectStep(
+  props: ComponentProps<typeof ConnectStepInner>,
+) {
+  const { status } = useSession();
+  if (status === "loading") {
+    return <span className="text-sm text-muted-foreground">Loading...</span>;
+  }
+  return <ConnectStepInner {...props} />;
 }

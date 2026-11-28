@@ -18,7 +18,7 @@ export default function ServerStep({
   onLaunched,
 }: {
   projectId: string;
-  onBack?: () => void;
+  onBack: () => void;
   onLaunched: (server: LaunchedServer) => void;
 }) {
   const locationsQuery = useHetznerLocations(projectId);
@@ -58,12 +58,10 @@ export default function ServerStep({
       )}
 
       <div className="flex justify-between gap-2">
-        {onBack && (
-          <Button type="button" variant="outline" onClick={onBack}>
-            <IconArrowNarrowLeft />
-            Back
-          </Button>
-        )}
+        <Button type="button" variant="outline" onClick={onBack}>
+          <IconArrowNarrowLeft />
+          Back
+        </Button>
         {failed.length > 0 && (
           <Button
             type="button"

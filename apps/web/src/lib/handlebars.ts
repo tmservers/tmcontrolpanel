@@ -1,6 +1,22 @@
+import { readFileSync } from "fs";
 import HandlebarsServer from "handlebars";
+import path from "path";
+import { packageDirectorySync } from "pkg-dir";
 
 HandlebarsServer.registerHelper("eq", (a, b) => a === b);
+
+// Controller and database env shared by server-init and add-server
+HandlebarsServer.registerPartial(
+  "controller-env",
+  readFileSync(
+    path.join(
+      packageDirectorySync() || process.cwd(),
+      "hetzner",
+      "controller-env.sh.hbs",
+    ),
+    "utf-8",
+  ),
+);
 
 // Provisioning scripts run as root, so form values never become shell syntax:
 // {{sh value}} is one single-quoted shell word

@@ -1,5 +1,6 @@
 import type * as Locations from "@/services/hetzner/locations";
 import type * as Networks from "@/services/hetzner/networks";
+import type * as Provisioning from "@/services/hetzner/provisioning";
 import type * as ServerActions from "@/services/hetzner/server-actions";
 import type * as ServerTypes from "@/services/hetzner/server-types";
 import type * as Servers from "@/services/hetzner/servers";
@@ -55,3 +56,13 @@ export const getHetznerServerMetrics = (
     start: start.toISOString(),
     end: end.toISOString(),
   });
+
+export const getServerProvisioning = (
+  projectId: string,
+  serverId: number,
+  panelServerId?: string,
+): ReturnType<typeof Provisioning.getServerProvisioning> =>
+  apiGet(
+    `${project(projectId)}/servers/${serverId}/provisioning`,
+    panelServerId ? { panelServerId } : undefined,
+  );

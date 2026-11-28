@@ -439,10 +439,18 @@ export async function createAdvancedServerSetup(
   );
 }
 
+export type SimpleServerSetupResult = {
+  server: HetznerServer;
+  // Set when a panel server was created or updated for this machine
+  panelServerId?: string;
+  // Why the panel server couldn't be saved; the Hetzner machine exists regardless
+  panelServerError?: string;
+};
+
 export async function createSimpleServerSetup(
   projectId: string,
   data: SimpleServerSetupSchemaType,
-): Promise<ServerResponse<HetznerServer>> {
+): Promise<ServerResponse<SimpleServerSetupResult>> {
   assertResourceId(projectId);
   return doServerActionWithAuth(
     ["hetzner:servers:create", `hetzner:${projectId}:admin`],
@@ -641,6 +649,8 @@ export async function createSimpleServerSetup(
         filemanagerPassword: dediData.filemanager_password,
       };
 
+      let panelServerId: string | undefined;
+      let panelServerError: string | undefined;
       try {
         if (data.createServer) {
           const db = getClient();
@@ -666,6 +676,7 @@ export async function createSimpleServerSetup(
               },
             },
           });
+          panelServerId = newServer.id;
           await publishServerEvent({
             type: "server.created",
             serverId: newServer.id,
@@ -709,6 +720,7 @@ export async function createSimpleServerSetup(
               ),
             },
           });
+          panelServerId = data.serverId;
           await publishServerEvent({
             type: "server.updated",
             serverId: data.serverId,
@@ -721,6 +733,11 @@ export async function createSimpleServerSetup(
         }
       } catch (error) {
         la(getErrorMessage(error), res.data.server.id);
+        // Only our own messages are shown; database errors stay in the audit log
+        panelServerError =
+          error instanceof ServerError
+            ? error.message
+            : "The panel server could not be saved.";
       }
 
       await setRateLimit(projectId, res);
@@ -764,7 +781,7 @@ export async function createSimpleServerSetup(
         }
       }
 
-      return res.data.server;
+      return { server: res.data.server, panelServerId, panelServerError };
     },
   );
 }

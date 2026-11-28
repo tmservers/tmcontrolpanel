@@ -9,6 +9,7 @@ import {
   useHetznerServerTypes,
 } from "@/hooks/use-hetzner-queries";
 import { useQueryErrorToast } from "@/hooks/use-query-error-toast";
+import { defaultServerTypeId } from "@/lib/hetzner-defaults";
 import { getErrorMessage } from "@/lib/utils";
 import { ServerError } from "@/types/responses";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -58,20 +59,12 @@ export default function AddHetznerDatabaseForm({
         ? data.find((loc) => loc.name === "fsn1")?.name || data[0].name
         : "",
     );
-     
   }, [locationsQuery.data]);
 
   useEffect(() => {
     const data = serverTypesQuery.data;
     if (!data) return;
-    form.setValue(
-      "serverType",
-      data.length > 0
-        ? data.find((st) => st.name === "cpx11")?.id.toString() ||
-            data[0].id.toString()
-        : "",
-    );
-     
+    form.setValue("serverType", defaultServerTypeId(data, "fsn1"));
   }, [serverTypesQuery.data]);
 
   async function onSubmit(values: AddHetznerDatabaseSchemaType) {

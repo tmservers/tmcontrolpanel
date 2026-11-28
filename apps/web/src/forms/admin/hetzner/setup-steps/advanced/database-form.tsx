@@ -2,6 +2,7 @@
 
 import FormElement from "@/components/form/form-element";
 import { Button } from "@/components/ui/button";
+import { defaultServerTypeId } from "@/lib/hetzner-defaults";
 import { HetznerLocation } from "@/types/api/hetzner/locations";
 import { HetznerServer, HetznerServerType } from "@/types/api/hetzner/servers";
 import { IconArrowNarrowLeft, IconArrowNarrowRight } from "@tabler/icons-react";
@@ -45,11 +46,7 @@ export default function DatabaseForm({
         ...form.getValues(),
         database: {
           new: true,
-          serverType:
-            serverTypes.length > 0
-              ? serverTypes.find((st) => st.name === "cpx11")?.id.toString() ||
-                serverTypes[0].id.toString()
-              : "",
+          serverType: defaultServerTypeId(serverTypes, "fsn1"),
           location:
             locations.length > 0
               ? locations.find((loc) => loc.name === "fsn1")?.name ||

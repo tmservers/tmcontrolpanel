@@ -2,9 +2,10 @@
 
 import AddHetznerDatabaseModal from "@/components/modals/hetzner/add-hetzner-database";
 import AddServerSetupModal from "@/components/modals/hetzner/add-server-setup";
+import QuickSetupModal from "@/components/modals/hetzner/quick-setup";
 import Modal from "@/components/modals/modal";
 import { Button } from "@/components/ui/button";
-import { IconPlus } from "@tabler/icons-react";
+import { IconPlus, IconRocket } from "@tabler/icons-react";
 
 export const createServerActions = (
   refetch: () => void,
@@ -19,6 +20,13 @@ export const createServerActions = (
         <Button collapse="sm" variant={"outline"}>
           <IconPlus />
           Add Database
+        </Button>
+      </Modal>
+      <Modal closeOnBackdropClick={false}>
+        <QuickSetupModal data={args?.id} onSubmit={refetch} />
+        <Button collapse="sm" variant={"outline"}>
+          <IconRocket />
+          Quick setup
         </Button>
       </Modal>
       <Modal closeOnBackdropClick={false}>

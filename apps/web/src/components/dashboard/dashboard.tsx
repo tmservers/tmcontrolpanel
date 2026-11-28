@@ -1,12 +1,16 @@
 "use client";
 
+import QuickSetupModal from "@/components/modals/hetzner/quick-setup";
+import Modal from "@/components/modals/modal";
+import AddServerModal from "@/components/modals/servers/add-server";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardAction,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -16,6 +20,7 @@ import {
   useDashboardAdminStats,
   useDashboardHetzner,
 } from "@/hooks/use-dashboard";
+import { queryKeys } from "@/lib/api-client/query";
 import { cn, generatePath, hasPermissionSync } from "@/lib/utils";
 import { useServers } from "@/providers/servers-provider";
 import { routePermissions, routes } from "@/routes";
@@ -26,8 +31,10 @@ import type {
 } from "@/services/dashboard";
 import {
   IconActivity,
+  IconArrowNarrowRight,
   IconCloud,
   IconKey,
+  IconPlus,
   IconPuzzle,
   IconServer,
   IconServerOff,
@@ -35,23 +42,56 @@ import {
   IconUsers,
   IconUsersGroup,
 } from "@tabler/icons-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ServerInfo } from "@tmcontrolpanel/shared";
 import { Session } from "next-auth";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 export default function Dashboard() {
-  const { data: session } = useSession();
+  const { data: session, update } = useSession();
   const { servers, loading } = useServers();
+  const queryClient = useQueryClient();
+  const [quickSetupOpen, setQuickSetupOpen] = useState(false);
 
   if (!session) return null;
 
   const online = servers.filter((s) => s.isConnected).length;
   const projects = session.user.projects;
+  const showGetStarted =
+    !loading &&
+    servers.length === 0 &&
+    hasPermissionSync(session, routePermissions.admin.hetzner.create);
 
   return (
     <div className="flex flex-col gap-6 p-4 lg:p-6">
+      {showGetStarted && (
+        <GetStartedCards
+          canAddServer={hasPermissionSync(
+            session,
+            routePermissions.admin.servers.create,
+          )}
+          onQuickSetup={() => setQuickSetupOpen(true)}
+          onServerAdded={() => void update()}
+        />
+      )}
+
+      {/* Outside the empty state, so the wizard stays open once the new server is listed */}
+      <Modal
+        isOpen={quickSetupOpen}
+        setIsOpen={setQuickSetupOpen}
+        closeOnBackdropClick={false}
+      >
+        <QuickSetupModal
+          onSubmit={() =>
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.dashboard("hetzner"),
+            })
+          }
+        />
+      </Modal>
+
       <div className="grid gap-4 grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="Servers online"
@@ -73,6 +113,57 @@ export default function Dashboard() {
       </div>
 
       {session.user.admin && <AdminSection />}
+    </div>
+  );
+}
+
+function GetStartedCards({
+  canAddServer,
+  onQuickSetup,
+  onServerAdded,
+}: {
+  canAddServer: boolean;
+  onQuickSetup: () => void;
+  onServerAdded: () => void;
+}) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <Card className="gap-6 py-6">
+        <CardHeader>
+          <CardTitle>Host a Trackmania server</CardTitle>
+          <CardDescription>
+            Rent a Hetzner Cloud server and have it running in the panel within
+            about 5 minutes, for a few euros a month.
+          </CardDescription>
+        </CardHeader>
+        <CardFooter className="mt-auto">
+          <Button onClick={onQuickSetup}>
+            Quick setup
+            <IconArrowNarrowRight />
+          </Button>
+        </CardFooter>
+      </Card>
+
+      {canAddServer && (
+        <Card className="gap-6 py-6">
+          <CardHeader>
+            <CardTitle>Connect an existing server</CardTitle>
+            <CardDescription>
+              Already running a dedicated server? Add its XML-RPC host and
+              credentials.
+            </CardDescription>
+          </CardHeader>
+          <CardFooter className="mt-auto">
+            <Modal closeOnBackdropClick={false}>
+              <AddServerModal onSubmit={onServerAdded} />
+              <Button variant="outline">
+                <IconPlus />
+                Add server
+              </Button>
+            </Modal>
+          </CardFooter>
+        </Card>
+      )}
     </div>
   );
 }

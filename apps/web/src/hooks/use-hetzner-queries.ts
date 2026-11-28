@@ -2,6 +2,7 @@ import {
   getAllDatabases,
   getAllNetworks,
   getHetznerLocations,
+  getServerProvisioning,
   getServerTypes,
   getSSHKeys,
 } from "@/lib/api-client/hetzner";
@@ -52,4 +53,33 @@ export const useHetznerDatabases = (projectId: string) =>
     queryFn: () => unwrap(getAllDatabases(projectId), "GetAllDatabasesError"),
     gcTime: 0,
     enabled: !!projectId,
+  });
+
+// Polls a new machine until the panel connects; stops on its own once connected or failed
+export const useHetznerProvisioning = (
+  projectId: string,
+  serverId: number | undefined,
+  panelServerId?: string,
+) =>
+  useQuery({
+    queryKey: [
+      ...queryKeys.hetzner(projectId, "provisioning"),
+      serverId,
+      panelServerId,
+    ],
+    queryFn: () =>
+      unwrap(
+        getServerProvisioning(projectId, serverId!, panelServerId),
+        "GetServerProvisioningError",
+      ),
+    enabled: !!projectId && !!serverId,
+    gcTime: 0,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (data?.stage === "connected" || data?.stage === "failed") return false;
+      // Running without a linked panel server: nothing left to wait for
+      if (data?.stage === "installing" && data.panelConnected === null)
+        return false;
+      return 5000;
+    },
   });

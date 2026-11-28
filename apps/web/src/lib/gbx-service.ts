@@ -13,6 +13,7 @@ import {
   type PluginCommandBody,
   type PluginEventBody,
   type PointsBody,
+  type ServerClient,
   type ServerLifecycleEvent,
 } from "@tmcontrolpanel/shared";
 import "server-only";
@@ -96,6 +97,9 @@ export const gbxService = {
       "POST",
       `/internal/cluster/workers/${encodeURIComponent(workerId)}/restart`,
     ),
+
+  serverStatus: (serverId: string) =>
+    request<ServerClient>("GET", internalPaths.server(serverId)),
 
   executeCommand: (serverId: string, body: CommandBody) =>
     request<CommandResult>("POST", internalPaths.command(serverId), body, {

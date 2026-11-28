@@ -2,6 +2,7 @@
 
 import { Form } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { defaultServerTypeId } from "@/lib/hetzner-defaults";
 import { HetznerLocation } from "@/types/api/hetzner/locations";
 import { HetznerServer, HetznerServerType } from "@/types/api/hetzner/servers";
 import { HetznerSSHKey } from "@/types/api/hetzner/ssh-keys";
@@ -46,12 +47,7 @@ export default function SimpleServerSetupForm({
             ? locations.find((loc) => loc.name === "fsn1")?.name ||
               locations[0]?.name
             : "",
-        serverType:
-          serverTypes.length > 0
-            ? serverTypes
-                .find((type) => type.name === "cpx11")
-                ?.id.toString() || serverTypes[0]?.id.toString()
-            : "",
+        serverType: defaultServerTypeId(serverTypes, "fsn1"),
       },
       serverController: undefined,
       database: undefined,
